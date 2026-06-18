@@ -5,26 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Planning HQ</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
-<script>
-(function(){
-  // Generate apple-touch-icon dynamically
-  var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">'
-    + '<rect width="180" height="180" rx="40" fill="%23b5650a"/>'
-    + '<polygon points="90,25 145,75 145,155 35,155 35,75" fill="%23fff" opacity="0.95"/>'
-    + '<polygon points="90,15 155,80 25,80" fill="%23f7f5f0"/>'
-    + '<rect x="68" y="110" width="44" height="45" rx="4" fill="%23b5650a"/>'
-    + '<rect x="42" y="95" width="32" height="28" rx="4" fill="%23dde9f9"/>'
-    + '<rect x="106" y="95" width="32" height="28" rx="4" fill="%23dde9f9"/>'
-    + '<circle cx="133" cy="133" r="28" fill="%23228a52"/>'
-    + '<polyline points="121,133 127,140 145,124" fill="none" stroke="%23fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>'
-    + '</svg>';
-  var url = 'data:image/svg+xml,' + svg;
-  var link = document.createElement('link');
-  link.rel = 'apple-touch-icon';
-  link.href = url;
-  document.head.appendChild(link);
-})();
-</script>
+<link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAGnUlEQVR42u3dP2gUQRTH8d3hSBERkYBanxhsrG0tDEhSWmmvhZBK7MRC7MTKLqnS2FlGLCxsrW1E0VqFICEkhQS0kAvn5fZ2Znb+vHnz/YGFmHP3Zj778nZ3bq9tMmf33vKfhqjKxvZRm2vbLYCJJuAtiIkm3C2QiSbYLZCJJtgtkIkm2C2QiSbYBsxEUoZ6aiVhXjk7YkYLzd7BsYhK3eaEDGCAh4bdpsYMYnDHRN2mwgxkMgS2Leo2NmYgk1CwbVAbMJPU8XVh49DE2mEw/59rTz4zCAmMmBBHBVXZDjOoh3vp82jAnLYygzouagPm9G0GqOOhNjl2hp4Z1LEcmaHVGcz+WEE9zNM8pyb3EVUrZlDHcWV8qzOYw+EEtb+vWa+GocuLGdRhY6jO+TGDOlyVNrE2AmZQ5+injWt1JvHxgdo9E78m5tECZlCnrtKcFArGBmr3tLbtBtU5H7KPT1cZ+MZuHTUVuoCKSaX2OCkkslGBOiDo2tsNKZhqR23j0HC5rixEVGpaDgJoIrkaUqUHgK61f5aOplbUfR6p0AVjoVIDWh0SUANaHQ5QA1odClADWh0GUANaHYLaURsw874AzaTz/gDNZPM+Ac0k834BzeTW+74Nk8r7BzSTyTgAmklkPADN5DEugAZzveNjmCxQA5pJYrwAzeQwboAGM+NXH2gwM45qQIOZ8VQDGsyMqxrQYGZ81YAGM+OsBjSYGW81oMHMuKsBDWbGXw1oMDMPakCDmflQAxrMzIsa0GAGtRrQYAa1GtBgBrXqk0JCigVNdaZKqwENZlCrAQ1mUKsBDWZQqwENZlCrAQ1mUKsBDWZQqwENZlCrAQ1mUKsBDWZQqwENZpLKgQEz0YTagJloQm3ATDShNmAmmlAbMBNNqA2YiSbUBsxEE+pRqB36+HTV6ueuv9hn9irLh4fnkm2LzxQSVQE0UZWR5J379vO31+s+PT7fNE3TXH32y/m14wtLxU0i4yQctO8Ehdx2CbAZJ1oOQg9dT9WRuB+MExWaUKEJATQhgCYE0IQAmgCaEEATAmhCokTcWo7JghkJ/9d461DsxDFOVGhChU4fn6WMXRUnxP8lNYwTFZpwUkgIoAkBNCEqTwol5s39M2L2ZT3DJbK1nTvWP/v10WtAg9ltf2KjdgE8m8vPb2cFTstREObY+7W2c2cQ5i7gdy/dpEKTNNm8cqtpAiOel2nUr76/q6dCS/lYfMhby1L3b/PKrSz7HrNiU6ErzFqCimyLOnS1FtlDjy8sZavUObedYl8lYI5ZrUfSJ8zrdYJXyeUcp9krEJJQh6rUXOWoJFIxh67UgAazKtSABvOp5LzbNxQ1oME8F3OpqAEN5s7KXCJqQIO5E2/u3tsHNTdWSGclTlWhQx44VOgKqvMimLmXe/btg2uVBnQlmOehkYA5NGpAV9RKTP9dEuaQAXSFJ4cSTwBDbR/QyvHafIJk8jO5UNts17bt4CoHB4KoSk2FJr0Ibau39NhUaUAXlhvPv5388UFv016UfMII6MIwT+do/8cg1Iswl4oa0IVi9kW9KJLWcgC60lzbehAFs9Qeu6+P5ioHSbqWI/ZBQoUuJO8fjYODzdFWxN4eoAtGvXzuojUgSWs5Ym6XlqNg1H3PuJt3kjf5lc9aDlJcpK7liLktQFeGOvdajtjboOUAfLZKTYUmQati6Xi9QO8dHCNCEWrWchC1qBdhZi0HyZKQ8EpYy/Hyy9vFoDe2j1pYkFLWcvTF6irH3sFxs3KWCyK1VfmYFTrWwULLUXlbou32N6ArASvxuRyu2+/rn09A2/TRXL4rH7r253JsbB+1VOgKT+qknAC6bNOmOju3HFTp8iL1uRyxtjWaLte795b/QOBf1rcOxX6T7GT/YsAq9Xb4pG12bjlqqtLrQr9Nq2u/uvri0tdy2LYbp0Db3mQBtdz96UOd+7FfMTBPuz0F2Lbt4EaL3KT8snhpoM2if6RKl5mYXw4vGbNXDw1qUEvrm3tBuyxYAjWoc2Ge5zTIjRVQgzp3Ze4F7bqsFNSgTom5y6fxeRGoQS0Rs1XLAWpQl4I5WA89DzWwQZ2iZ56NdfX1XefBDRi5yXkDxgeyTbfg1E4MWbwEbFDHxuwMeihqYNeLe0hr4XIe5/WJ71DLTMGtH/bQHtn1osSgRxiEXj8N8PKBhzrJ8328xuBncvChABI6Q54VY3JunJDQnoJipFqT3IUxSnUFNsn1Gz5quwBskrpVTdL/ApukOudKfkIHbhDHzF+qPl+DCS3KsQAAAABJRU5ErkJggg==">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Planning HQ">
 <meta name="theme-color" content="#f7f5f0">
