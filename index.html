@@ -3,10 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Reno HQ</title>
+<title>Planning HQ</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
+<script>
+(function(){
+  // Generate apple-touch-icon dynamically
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">'
+    + '<rect width="180" height="180" rx="40" fill="%23b5650a"/>'
+    + '<polygon points="90,25 145,75 145,155 35,155 35,75" fill="%23fff" opacity="0.95"/>'
+    + '<polygon points="90,15 155,80 25,80" fill="%23f7f5f0"/>'
+    + '<rect x="68" y="110" width="44" height="45" rx="4" fill="%23b5650a"/>'
+    + '<rect x="42" y="95" width="32" height="28" rx="4" fill="%23dde9f9"/>'
+    + '<rect x="106" y="95" width="32" height="28" rx="4" fill="%23dde9f9"/>'
+    + '<circle cx="133" cy="133" r="28" fill="%23228a52"/>'
+    + '<polyline points="121,133 127,140 145,124" fill="none" stroke="%23fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '</svg>';
+  var url = 'data:image/svg+xml,' + svg;
+  var link = document.createElement('link');
+  link.rel = 'apple-touch-icon';
+  link.href = url;
+  document.head.appendChild(link);
+})();
+</script>
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Reno HQ">
+<meta name="apple-mobile-web-app-title" content="Planning HQ">
 <meta name="theme-color" content="#f7f5f0">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -214,11 +234,10 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 <body>
 
 <nav class="nav">
-  <div class="brand">RENO HQ</div>
+  <div class="brand">PLANNING HQ</div>
   <button class="ntab on" onclick="showTab('overview')">Overview</button>
   <button class="ntab" onclick="showTab('projects')">Projects</button>
   <button class="ntab" onclick="showTab('gantt')">Gantt</button>
-  <button class="ntab" onclick="showTab('procurement')">Procurement</button>
   <button class="ntab" onclick="showTab('rules')">Rules</button>
   <button class="ntab" onclick="showTab('storage')">Storage</button>
   <button class="ntab" onclick="showTab('sitemap')">Site Map</button>
@@ -316,9 +335,6 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
   </table></div>
 </div>
 
-<!-- PROCUREMENT -->
-<div id="tab-procurement" class="panel">
-  <div class="ptitle">Procurement</div>
   <div class="pmeta">ALL ORDERS BY 19 JUNE · 7-DAY LEAD TIME</div>
   <div class="alert"><strong>Critical:</strong> Order roof exterior materials first.</div>
   <div id="proc-list"></div>
@@ -406,6 +422,9 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
   <div class="zhandle"></div>
   <div class="ztitle" id="z-title">Zone</div>
   <div class="zsub" id="z-sub"></div>
+  <div id="z-goto" style="display:none;margin-bottom:12px;">
+    <button class="btn" id="z-goto-btn" style="font-size:10px;padding:6px 12px;width:100%;">&#8594; Go to Section in Project Plan</button>
+  </div>
   <div class="ztabs">
     <button class="ztab on" onclick="showZTab('tasks')">Tasks</button>
     <button class="ztab" onclick="showZTab('ideas')">Ideas</button>
@@ -948,45 +967,96 @@ function addProject() {
   toggleAddProj(); renderProjects();
 }
 
-// ── GANTT ─────────────────────────────────────────
+// ── GANTT (fully dynamic from DB.projects) ───────────
 function renderGantt() {
-  var tb = document.getElementById('gantt-body'); if (!tb) return;
+  var tb = document.getElementById('gantt-body');
+  if (!tb) return;
   tb.innerHTML = '';
   var WE = [1,2,7,8];
+  var colors = [];
+
   DB.projects.forEach(function(proj) {
-    var gtr = document.createElement('tr'); gtr.className = 'gr';
-    var gtd = document.createElement('td'); gtd.className = 'ltd'; gtd.colSpan = 13;
+    // Group header row
+    var gtr = document.createElement('tr');
+    gtr.className = 'gr';
+    var gtd = document.createElement('td');
+    gtd.className = 'ltd';
+    gtd.colSpan = 13;
     gtd.style.cssText = 'color:' + proj.color + ';font-family:Bebas Neue,sans-serif;letter-spacing:2px;font-size:11px;';
-    gtd.textContent = proj.name; gtr.appendChild(gtd); tb.appendChild(gtr);
+    gtd.textContent = proj.name;
+    gtr.appendChild(gtd);
+    tb.appendChild(gtr);
+    colors.push({label: proj.name.split(' - ')[0].trim(), color: proj.color});
+
+    // One row per task
     proj.phases.forEach(function(ph) {
       ph.tasks.forEach(function(t) {
         var tr = document.createElement('tr');
-        var ltd = document.createElement('td'); ltd.className = 'ltd';
-        var d1 = document.createElement('div'); d1.textContent = t.name;
-        var d2 = document.createElement('div'); d2.className = 'gs'; d2.textContent = proj.name.split(' - ')[0];
+        var ltd = document.createElement('td');
+        ltd.className = 'ltd';
+        var d1 = document.createElement('div');
+        d1.textContent = t.name;
+        var d2 = document.createElement('div');
+        d2.className = 'gs';
+        d2.textContent = ph.label;
         ltd.appendChild(d1); ltd.appendChild(d2); tr.appendChild(ltd);
+
+        // Status indicator on label
+        var s = ts(t.id);
+        if (s === 'done') ltd.style.opacity = '0.5';
+        if (s === 'blocked') d1.style.color = 'var(--red)';
+        if (s === 'in-progress') d1.style.color = 'var(--blue)';
+
         for (var i = 0; i < 12; i++) {
-          var td = document.createElement('td'); td.className = 'gc' + (WE.indexOf(i) > -1 ? ' we' : '');
-          td.style.position = 'relative'; tr.appendChild(td);
+          var td = document.createElement('td');
+          td.className = 'gc' + (WE.indexOf(i) > -1 ? ' we' : '');
+          td.style.position = 'relative';
+          tr.appendChild(td);
         }
         tb.appendChild(tr);
-        var dm = t.day.match(/Day[s]?\s*(\d+)[\s\-]+?(\d+)?/i);
+
+        // Parse day range e.g. "Days 1-2", "Day 3", "Days 4-6"
+        var dm = t.day.match(/Day[s]?\s*(\d+)[\s\-–]+(\d+)?/i);
+        if (!dm) dm = t.day.match(/Day[s]?\s*(\d+)/i);
         if (dm) {
-          var s = parseInt(dm[1]) - 1;
-          var e = dm[2] ? parseInt(dm[2]) - 1 : s;
-          var span = e - s + 1;
-          var tds = tr.querySelectorAll('td.gc');
-          if (tds[s]) {
-            var bar = document.createElement('div'); bar.className = 'gbar';
-            bar.style.cssText = 'background:' + proj.color + ';color:#fff;left:2px;width:calc(' + span + ' * 100% - 4px);';
-            bar.textContent = t.name.length > 14 ? t.name.substring(0, 13) + '...' : t.name;
-            tds[s].appendChild(bar);
+          var s2 = parseInt(dm[1]) - 1;
+          var e2 = dm[2] ? parseInt(dm[2]) - 1 : s2;
+          if (s2 >= 0 && s2 < 12) {
+            var span = Math.min(e2 - s2 + 1, 12 - s2);
+            var tds = tr.querySelectorAll('td.gc');
+            if (tds[s2]) {
+              var bar = document.createElement('div');
+              bar.className = 'gbar';
+              var col = s === 'done' ? '#aaa' : (s === 'blocked' ? 'var(--red)' : proj.color);
+              bar.style.cssText = 'background:' + col + ';color:#fff;left:2px;width:calc(' + span + ' * 100% - 4px);';
+              bar.textContent = t.name.length > 14 ? t.name.substring(0, 13) + '...' : t.name;
+              tds[s2].appendChild(bar);
+            }
           }
         }
       });
     });
   });
+
+  // Update legend dynamically
+  var leg = document.getElementById('gantt-legend');
+  if (leg) {
+    leg.innerHTML = '';
+    var seen = {};
+    DB.projects.forEach(function(p) {
+      if (seen[p.color]) return;
+      seen[p.color] = true;
+      var item = document.createElement('div');
+      item.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text3)';
+      var dot = document.createElement('div');
+      dot.style.cssText = 'width:11px;height:7px;border-radius:2px;background:' + p.color;
+      item.appendChild(dot);
+      item.appendChild(document.createTextNode(p.name.split(' - ')[0].trim()));
+      leg.appendChild(item);
+    });
+  }
 }
+
 
 // ── PROCUREMENT ───────────────────────────────────
 function renderProcurement() {
@@ -1218,6 +1288,15 @@ var SM = {
     var proj = DB.projects.find(function(p) { return p.id === z.sectionId; });
     document.getElementById('z-title').textContent = z.name;
     document.getElementById('z-sub').textContent = proj ? proj.name : 'No section linked';
+    var gotoDiv = document.getElementById('z-goto');
+    var gotoBtn = document.getElementById('z-goto-btn');
+    if (proj && gotoDiv && gotoBtn) {
+      gotoDiv.style.display = 'block';
+      gotoBtn.textContent = '\u2192 Go to ' + proj.name;
+      gotoBtn.onclick = function() { closeZone(); showTab('projects'); collapseToLevel('sections'); setTimeout(function() { var el = document.querySelector('[data-proj="' + proj.id + '"] .phead'); if (el) { el.scrollIntoView({behavior:'smooth', block:'center'}); el.click(); } }, 100); };
+    } else if (gotoDiv) {
+      gotoDiv.style.display = 'none';
+    }
     var te = document.getElementById('zt-tasks');
     te.innerHTML = '';
     if (proj) {
@@ -1306,8 +1385,6 @@ var SM = {
   linkSection: function(zid, sid) {
     var z = this.active && this.active.zones.find(function(x) { return x.id === zid; }); if (!z) return;
     z.sectionId = sid || null;
-    var proj = DB.projects.find(function(p) { return p.id === sid; });
-    document.getElementById('z-sub').textContent = proj ? proj.name : 'No section linked';
     this.saveDB(); this.draw(); this.openZone(zid);
   },
   delZone: function(zid) {
@@ -1325,6 +1402,11 @@ function smLoadBg(e) { var f = e.target.files[0]; if (!f) return; var r = new Fi
 function smStartDraw() { SM.startDraw(); }
 function smCancelDraw() { SM.cancelDraw(); }
 function smUndo() { SM.undo(); }
+function smClearSketch() {
+  if (!SM.active) return;
+  if (!confirm('Clear all zones from this layout?')) return;
+  SM.active.zones = []; SM.saveDB(); SM.draw();
+}
 
 function showZTab(name) {
   document.querySelectorAll('.ztab').forEach(function(t) { t.classList.remove('on'); });
@@ -1351,7 +1433,6 @@ function showTab(name) {
 function renderAll() {
   renderProjects();
   renderGantt();
-  renderProcurement();
   renderDeps();
   updateStats();
 }
