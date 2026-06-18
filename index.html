@@ -743,92 +743,123 @@ function addProject(){
 function renderProjectCard(p,container){
   const pct=ppct(p), open=isOpen('proj',p.id);
   const div=document.createElement('div');
-  div.className='pcard'+(open?' open':''); div.dataset.proj=p.id;
-  div.innerHTML=
-    '<div class="phead" onclick="toggleEl('proj',''+p.id+'',this)">'+
-      '<div class="pcol" style="background:'+p.color+'"></div>'+
-      '<div class="pinfo">'+
-        '<div class="pname">'+
-          '<span ondblclick="event.stopPropagation();editPName(''+p.id+'',this)" title="Double-click to edit">'+p.name+'</span>'+
-          '<button class="ebtn del" onclick="event.stopPropagation();delProject(''+p.id+'')" style="font-size:8px;">✕</button>'+
-        '</div>'+
-        '<div class="psub">'+
-          '<span ondblclick="event.stopPropagation();editPSub(''+p.id+'',this)">'+p.sub+'</span>'+
-          ' · <span ondblclick="event.stopPropagation();editPDays(''+p.id+'',this)">'+p.days+'</span>'+
-        '</div>'+
-      '</div>'+
-      '<div class="pright">'+
-        '<span class="ppct" data-pp="'+p.id+'">'+pct+'%</span>'+
-        '<div class="pbar"><div class="pbar-fill" data-pb="'+p.id+'" style="width:'+pct+'%;background:'+p.color+'"></div></div>'+
-        '<div class="caret" style="'+(open?'transform:rotate(180deg)':'')+'">▼</div>'+
-      '</div>'+
-    '</div>'+
-    '<div class="pbody">'+
-      p.phases.map(ph=>renderPhase(p.id,ph)).join('')+
-      '<div style="padding:7px 13px;border-top:1px solid var(--border);">'+
-        '<button class="ebtn add" onclick="addPhase(''+p.id+'')">+ Phase</button>'+
-      '</div>'+
-    '</div>';
+  div.className='pcard'+(open?' open':'');
+  div.dataset.proj=p.id;
+  const head=document.createElement('div');
+  head.className='phead';
+  head.addEventListener('click',()=>toggleEl('proj',p.id,head));
+  head.innerHTML=
+    `<div class="pcol" style="background:${p.color}"></div>`+
+    `<div class="pinfo">`+
+      `<div class="pname">`+
+        `<span class="editable" data-field="pname" data-id="${p.id}">${p.name}</span>`+
+        `<button class="ebtn del" data-action="delProject" data-id="${p.id}" style="font-size:8px;">&#x2715;</button>`+
+      `</div>`+
+      `<div class="psub">`+
+        `<span class="editable" data-field="psub" data-id="${p.id}">${p.sub}</span>`+
+        ` · <span class="editable" data-field="pdays" data-id="${p.id}">${p.days}</span>`+
+      `</div>`+
+    `</div>`+
+    `<div class="pright">`+
+      `<span class="ppct" data-pp="${p.id}">${pct}%</span>`+
+      `<div class="pbar"><div class="pbar-fill" data-pb="${p.id}" style="width:${pct}%;background:${p.color}"></div></div>`+
+      `<div class="caret" style="${open?'transform:rotate(180deg)':''}">&#x25bc;</div>`+
+    `</div>`;
+  div.appendChild(head);
+  const body=document.createElement('div');
+  body.className='pbody';
+  p.phases.forEach(ph=>{ body.innerHTML+=renderPhase(p.id,ph); });
+  body.innerHTML+=`<div style="padding:7px 13px;border-top:1px solid var(--border);"><button class="ebtn add" data-action="addPhase" data-id="${p.id}">+ Phase</button></div>`;
+  div.appendChild(body);
+  div.addEventListener('click',function(e){
+    const btn=e.target.closest('[data-action]');
+    if(btn){
+      e.stopPropagation();
+      const act=btn.dataset.action, id=btn.dataset.id, id2=btn.dataset.id2||'', id3=btn.dataset.id3||'', idx=btn.dataset.idx, key=btn.dataset.key;
+      if(act==='delProject') delProject(id);
+      else if(act==='addPhase') addPhase(id);
+      else if(act==='delPhase') delPhase(id,id2);
+      else if(act==='addTask') addTask(id,id2);
+      else if(act==='delTask') delTask(id,id2,id3);
+      else if(act==='delAction') delAction(id,parseInt(idx));
+      else if(act==='addAction') addAction(id);
+      else if(act==='cycleStatus') cycleStatus(id,btn);
+      else if(act==='toggleAction') toggleAction(key,btn);
+    }
+    const ed=e.target.closest('.editable');
+    if(ed){
+      e.stopPropagation();
+      const field=ed.dataset.field, id=ed.dataset.id, id2=ed.dataset.id2||'', idx=ed.dataset.idx;
+      if(field==='pname') editPName(id,ed);
+      else if(field==='psub') editPSub(id,ed);
+      else if(field==='pdays') editPDays(id,ed);
+      else if(field==='phlabel') editPhLabel(id,id2,ed);
+      else if(field==='tname') editTName(id,ed);
+      else if(field==='tdesc') editTDesc(id,ed);
+      else if(field==='tday') editTDay(id,ed);
+      else if(field==='atxt') editATxt(id,parseInt(idx),ed);
+      else if(field==='aown') editAOwn(id,parseInt(idx),ed);
+    }
+  });
   container.appendChild(div);
 }
 
 function renderPhase(pid,ph){
   const open=isOpen('phase',ph.id);
   const done=ph.tasks.filter(t=>ts(t.id)==='done').length;
-  return '<div class="phase'+(open?' open':'')+'" data-phase="'+ph.id+'">'+
-    '<div class="phhead" onclick="toggleEl('phase',''+ph.id+'',this)">'+
-      '<span class="phlbl" style="color:'+ph.color+'" ondblclick="event.stopPropagation();editPhLabel(''+pid+'',''+ph.id+'',this)">'+ph.label+'</span>'+
-      (ph.note?'<span class="phnote">'+ph.note+'</span>':'')+
-      '<span class="phcount">'+done+'/'+ph.tasks.length+'</span>'+
-      '<button class="ebtn add" onclick="event.stopPropagation();addTask(''+pid+'',''+ph.id+'')" style="margin-left:6px;">+ Task</button>'+
-      '<button class="ebtn del" onclick="event.stopPropagation();delPhase(''+pid+'',''+ph.id+'')" style="margin-left:4px;">✕</button>'+
-      '<div class="caret" style="margin-left:5px;'+(open?'transform:rotate(180deg)':'')+'">▼</div>'+
-    '</div>'+
-    '<div class="phtasks">'+ph.tasks.map(t=>renderTask(pid,ph.id,t)).join('')+'</div>'+
-  '</div>';
+  const note=ph.note?`<span class="phnote">${ph.note}</span>`:'';
+  return `<div class="phase${open?' open':''}" data-phase="${ph.id}">
+    <div class="phhead" onclick="toggleEl('phase','${ph.id}',this)">
+      <span class="phlbl editable" style="color:${ph.color}" data-field="phlabel" data-id="${pid}" data-id2="${ph.id}">${ph.label}</span>
+      ${note}
+      <span class="phcount">${done}/${ph.tasks.length}</span>
+      <button class="ebtn add" data-action="addTask" data-id="${pid}" data-id2="${ph.id}" style="margin-left:6px;">+ Task</button>
+      <button class="ebtn del" data-action="delPhase" data-id="${pid}" data-id2="${ph.id}" style="margin-left:4px;">&#x2715;</button>
+      <div class="caret" style="margin-left:5px;${open?'transform:rotate(180deg)':''}>&#x25bc;</div>
+    </div>
+    <div class="phtasks">${ph.tasks.map(t=>renderTask(pid,ph.id,t)).join('')}</div>
+  </div>`;
 }
 
 function renderTask(pid,phid,t){
   const open=isOpen('task',t.id), s=ts(t.id), isDone=s==='done';
   const tot=t.actions.length, done=t.actions.filter((_,i)=>ad(t.id+'-'+i)).length;
   const pct=tot===0?0:Math.round((done/tot)*100);
-  return '<div class="task'+(isDone?' done':'')+(open?' open':'')+'" data-task="'+t.id+'">'+
-    '<div class="thead" onclick="toggleEl('task',''+t.id+'',this)">'+
-      '<div class="tcb'+(isDone?' on':'')+'" onclick="event.stopPropagation();cycleStatus(''+t.id+'',this)">'+(isDone?'✓':'')+'</div>'+
-      '<div class="tmain">'+
-        '<div class="tnrow">'+
-          '<span class="tname" ondblclick="event.stopPropagation();editTName(''+t.id+'',this)">'+t.name+'</span>'+
-          '<button class="ebtn del" onclick="event.stopPropagation();delTask(''+pid+'',''+phid+'',''+t.id+'')" style="font-size:7px;">✕</button>'+
-        '</div>'+
-        '<div class="tdesc" ondblclick="event.stopPropagation();editTDesc(''+t.id+'',this)">'+t.desc+'</div>'+
-        '<div class="ttags">'+
-          t.tags.map(tg=>'<span class="ttag '+tg+'">'+tg+'</span>').join('')+
-          '<span class="ttag" data-ac="'+t.id+'">'+done+'/'+tot+' actions</span>'+
-        '</div>'+
-      '</div>'+
-      '<div class="tright">'+
-        '<div class="spill '+s+'" onclick="event.stopPropagation();cycleStatus(''+t.id+'',this)">'+s.replace('-',' ')+'</div>'+
-        '<div class="tdaylbl" ondblclick="event.stopPropagation();editTDay(''+t.id+'',this)">'+t.day+'</div>'+
-        '<div data-ap="'+t.id+'" style="font-family:JetBrains Mono,monospace;font-size:8px;color:var(--text3)">'+pct+'%</div>'+
-      '</div>'+
-      '<div class="caret" style="margin-left:5px;'+(open?'transform:rotate(180deg)':'')+'">▼</div>'+
-    '</div>'+
-    '<div class="tbody">'+
-      '<div class="alist">'+
-        t.actions.map((a,i)=>{
-          const k=t.id+'-'+i, c=ad(k);
-          return '<div class="aitem'+(c?' done':'')+'">'+
-            '<div class="acb'+(c?' on':'')+'" onclick="toggleAction(''+k+'',this)">'+(c?'✓':'')+'</div>'+
-            '<div class="atxt" ondblclick="editATxt(''+t.id+'','+i+',this)">'+a.t+'</div>'+
-            '<div class="aown" ondblclick="editAOwn(''+t.id+'','+i+',this)">'+a.o+'</div>'+
-            '<button class="ebtn del" onclick="delAction(''+t.id+'','+i+')" style="font-size:7px;margin-left:3px;">✕</button>'+
-          '</div>';
-        }).join('')+
-      '</div>'+
-      '<div class="addrow"><button class="ebtn add" onclick="addAction(''+t.id+'')">+ Action</button></div>'+
-    '</div>'+
-  '</div>';
+  const tags=t.tags.map(tg=>`<span class="ttag ${tg}">${tg}</span>`).join('');
+  const actions=t.actions.map((a,i)=>{
+    const k=t.id+'-'+i, checked=ad(k);
+    return `<div class="aitem${checked?' done':''}>
+      <div class="acb${checked?' on':''}" data-action="toggleAction" data-key="${k}">${checked?'&#x2713;':''}</div>
+      <div class="atxt editable" data-field="atxt" data-id="${t.id}" data-idx="${i}">${a.t}</div>
+      <div class="aown editable" data-field="aown" data-id="${t.id}" data-idx="${i}">${a.o}</div>
+      <button class="ebtn del" data-action="delAction" data-id="${t.id}" data-idx="${i}" style="font-size:7px;margin-left:3px;">&#x2715;</button>
+    </div>`;
+  }).join('');
+  return `<div class="task${isDone?' done':''}" data-task="${t.id}">
+    <div class="thead" onclick="toggleEl('task','${t.id}',this)">
+      <div class="tcb${isDone?' on':''}" data-action="cycleStatus" data-id="${t.id}">${isDone?'&#x2713;':''}</div>
+      <div class="tmain">
+        <div class="tnrow">
+          <span class="tname editable" data-field="tname" data-id="${t.id}">${t.name}</span>
+          <button class="ebtn del" data-action="delTask" data-id="${pid}" data-id2="${phid}" data-id3="${t.id}" style="font-size:7px;">&#x2715;</button>
+        </div>
+        <div class="tdesc editable" data-field="tdesc" data-id="${t.id}">${t.desc}</div>
+        <div class="ttags">${tags}<span class="ttag" data-ac="${t.id}">${done}/${tot} actions</span></div>
+      </div>
+      <div class="tright">
+        <div class="spill ${s}" data-action="cycleStatus" data-id="${t.id}">${s.replace('-',' ')}</div>
+        <div class="tdaylbl editable" data-field="tday" data-id="${t.id}">${t.day}</div>
+        <div data-ap="${t.id}" style="font-size:8px;color:var(--text3)">${pct}%</div>
+      </div>
+      <div class="caret" style="margin-left:5px;${open?'transform:rotate(180deg)':''}>&#x25bc;</div>
+    </div>
+    <div class="tbody">
+      <div class="alist">${actions}</div>
+      <div class="addrow"><button class="ebtn add" data-action="addAction" data-id="${t.id}">+ Action</button></div>
+    </div>
+  </div>`;
 }
+
 
 function renderProjects(){
   ['proj-list','ov-list'].forEach(id=>{
