@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Reno HQ</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Reno HQ">
+<meta name="theme-color" content="#f7f5f0">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f5f0;--s1:#fff;--s2:#f0ece3;--s3:#e7e1d5;
+  --border:#ddd6c9;--border2:#c9bfb0;
+  --text:#2b2722;--text2:#6e655a;--text3:#9c9286;
+  --accent:#b5650a;--accent-dim:#fbe9d2;
+  --red:#c43d32;--red-dim:#fbe1de;
+  --blue:#2868b0;--blue-dim:#dde9f9;
+  --green:#228a52;--green-dim:#ddf3e6;
+  --purple:#7a3fd1;--teal:#168f7a;--orange:#c2531f;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;padding-bottom:calc(60px + env(safe-area-inset-bottom));}
+.topnav{position:sticky;top:0;z-index:100;background:rgba(247,245,240,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px;padding-top:env(safe-area-inset-top);overflow-x:auto;gap:0;}
+.brand{font-family:Bebas Neue,sans-serif;font-size:17px;letter-spacing:2px;color:var(--accent);white-space:nowrap;margin-right:14px;padding:12px 0;}
+.ntab{padding:12px 11px;font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;text-transform:uppercase;background:none;border-top:none;border-left:none;border-right:none;}
+.ntab:hover{color:var(--text2);}
+.ntab.on{color:var(--accent);border-bottom-color:var(--accent);}
+.panel{display:none;padding:16px 14px;}
+.panel.on{display:block;}
+.ptitle{font-family:Bebas Neue,sans-serif;font-size:clamp(24px,6vw,44px);letter-spacing:2px;color:var(--accent);line-height:1;margin-bottom:3px;}
+.pmeta{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);margin-bottom:12px;}
+.badge-row{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px;}
+.badge{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 7px;border-radius:3px;border:1px solid var(--border2);color:var(--text3);}
+.badge.ok{border-color:var(--green);color:var(--green);}
+.badge.warn{border-color:var(--red);color:var(--red);}
+.badge.hi{border-color:var(--accent);color:var(--accent);background:rgba(181,101,10,.07);}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:7px;margin-bottom:14px;}
+.scard{background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:10px;text-align:center;}
+.snum{font-family:Bebas Neue,sans-serif;font-size:26px;line-height:1;color:var(--accent);}
+.slbl{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text3);letter-spacing:1px;margin-top:2px;}
+.prog{background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:11px;margin-bottom:14px;}
+.prog-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);margin-bottom:6px;display:flex;justify-content:space-between;}
+.prog-outer{background:var(--border);border-radius:4px;height:6px;overflow:hidden;}
+.prog-inner{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--orange));transition:width .4s;}
+.slabel{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--text3);text-transform:uppercase;margin-bottom:9px;display:flex;align-items:center;gap:8px;}
+.slabel::after{content:'';flex:1;height:1px;background:var(--border);}
+.alert{background:rgba(181,101,10,.08);border:1px solid var(--accent-dim);border-left:3px solid var(--accent);border-radius:6px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:#8a5a0a;line-height:1.6;}
+.alert strong{color:var(--accent);}
+/* VIEW BUTTONS */
+.vrow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center;}
+.vrow span{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:1px;}
+/* PROJECT TREE */
+.plist{display:flex;flex-direction:column;gap:9px;}
+.pcard{background:var(--s1);border:1px solid var(--border);border-radius:9px;overflow:hidden;}
+.phead{display:flex;align-items:center;gap:9px;padding:14px 13px;cursor:pointer;background:var(--s2);border-bottom:1px solid var(--border);user-select:none;-webkit-tap-highlight-color:transparent;}
+.phead:hover{background:var(--s3);}
+.pcol{width:5px;height:32px;border-radius:2px;flex-shrink:0;}
+.pinfo{flex:1;min-width:0;}
+.pname{font-size:14px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:5px;}
+.psub{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);margin-top:2px;}
+.pright{display:flex;align-items:center;gap:7px;flex-shrink:0;}
+.ppct{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);}
+.pbar{width:55px;height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.pbar-fill{height:100%;border-radius:2px;transition:width .3s;}
+.caret{font-size:10px;color:var(--text3);transition:transform .2s;flex-shrink:0;}
+.pbody{display:none;border-top:1px solid var(--border);}
+.pcard.open>.pbody{display:block;}
+.pcard.open>.phead .caret{transform:rotate(180deg);}
+/* PHASE */
+.phase{border-bottom:1px solid var(--border);}
+.phase:last-child{border-bottom:none;}
+.phhead{display:flex;align-items:center;gap:7px;padding:11px 13px 11px 20px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;transition:background .15s;}
+.phhead:hover{background:var(--s2);}
+.phlbl{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;font-weight:500;}
+.phnote{font-size:9px;color:var(--text3);font-family:'JetBrains Mono',monospace;}
+.phcount{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);margin-left:auto;}
+.phtasks{display:none;}
+.phase.open>.phtasks{display:block;}
+.phase.open>.phhead .caret{transform:rotate(180deg);}
+/* TASK */
+.task{padding:10px 13px 10px 28px;border-bottom:1px solid var(--border);background:var(--bg);}
+.task:last-child{border-bottom:none;}
+.thead{display:flex;align-items:flex-start;gap:8px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;}
+.tcb{width:20px;height:20px;border:2px solid var(--border2);border-radius:4px;flex-shrink:0;margin-top:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .15s;background:var(--s1);}
+.tcb.on{background:var(--green-dim);border-color:var(--green);color:var(--green);}
+.tmain{flex:1;min-width:0;}
+.tnrow{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.tname{font-size:13px;font-weight:600;color:var(--text);}
+.task.done .tname{color:var(--text3);text-decoration:line-through;}
+.tdesc{font-size:10px;color:var(--text3);margin-top:2px;line-height:1.5;}
+.ttags{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;}
+.ttag{font-family:'JetBrains Mono',monospace;font-size:8px;padding:2px 5px;border-radius:2px;border:1px solid var(--border2);color:var(--text3);}
+.ttag.weather{border-color:var(--blue-dim);color:var(--blue);}
+.ttag.dep{border-color:#ecdffb;color:var(--purple);}
+.ttag.material{border-color:var(--accent-dim);color:var(--accent);}
+.ttag.electrical{border-color:#ffe2c2;color:var(--orange);}
+.ttag.batch{border-color:#d6f3ec;color:var(--teal);}
+.ttag.critical{border-color:var(--red-dim);color:var(--red);}
+.tright{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;}
+.spill{font-family:'JetBrains Mono',monospace;font-size:9px;padding:4px 8px;border-radius:10px;border:1px solid;white-space:nowrap;cursor:pointer;transition:all .15s;}
+.spill.not-started{border-color:var(--border2);color:var(--text3);}
+.spill.in-progress{border-color:var(--blue);color:var(--blue);background:rgba(40,104,176,.1);}
+.spill.blocked{border-color:var(--red);color:var(--red);background:rgba(196,61,50,.1);}
+.spill.done{border-color:var(--green);color:var(--green);background:rgba(34,138,82,.1);}
+.tdaylbl{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text3);}
+.tbody{display:none;margin-top:5px;}
+.task.open>.thead .caret{transform:rotate(180deg);}
+.task.open>.tbody{display:block;}
+/* ACTIONS */
+.alist{margin-left:18px;border-left:2px solid var(--border);padding-left:9px;}
+.aitem{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);}
+.aitem:last-child{border-bottom:none;}
+.acb{width:20px;height:20px;border:2px solid var(--border2);border-radius:4px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .15s;background:var(--bg);}
+.acb.on{background:rgba(34,138,82,.1);border-color:var(--green);color:var(--green);}
+.atxt{font-size:11px;color:var(--text2);line-height:1.5;flex:1;cursor:text;}
+.aitem.done .atxt{color:var(--text3);text-decoration:line-through;}
+.aown{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text3);white-space:nowrap;flex-shrink:0;}
+.addrow{display:flex;gap:5px;margin-top:6px;margin-left:18px;}
+/* EDIT BTNS */
+.ebtn{font-family:'JetBrains Mono',monospace;font-size:9px;padding:4px 8px;border-radius:3px;border:1px solid var(--border2);background:none;color:var(--text3);cursor:pointer;transition:all .15s;white-space:nowrap;min-height:28px;}
+.ebtn:hover{border-color:var(--accent);color:var(--accent);}
+.ebtn.del:hover{border-color:var(--red);color:var(--red);}
+.ebtn.add{border-color:var(--green-dim);color:var(--green);}
+.iinput{background:var(--s2);border:1px solid var(--accent);color:var(--text);border-radius:3px;padding:4px 7px;font-family:'Syne',sans-serif;font-size:13px;outline:none;width:100%;}
+/* ADD PROJECT */
+.addcard{background:var(--s1);border:1px dashed var(--border2);border-radius:9px;padding:14px;margin-top:8px;}
+.addcard h3{font-family:Bebas Neue,sans-serif;font-size:15px;letter-spacing:2px;color:var(--text2);margin-bottom:10px;}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:8px;}
+.ff{display:flex;flex-direction:column;gap:3px;}
+.ff label{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;}
+.ff input{background:var(--s2);border:1px solid var(--border2);color:var(--text);border-radius:3px;padding:7px 8px;font-family:'Syne',sans-serif;font-size:12px;outline:none;}
+.ff input:focus{border-color:var(--accent);}
+.cswatches{display:flex;gap:5px;flex-wrap:wrap;margin-top:3px;}
+.cswatch{width:22px;height:22px;border-radius:3px;cursor:pointer;border:2px solid transparent;transition:all .15s;}
+.cswatch.on{border-color:var(--text);transform:scale(1.15);}
+.btn{font-family:'JetBrains Mono',monospace;font-size:10px;padding:8px 14px;border-radius:4px;border:1px solid var(--accent);background:rgba(181,101,10,.1);color:var(--accent);cursor:pointer;transition:all .15s;letter-spacing:1px;}
+.btn:hover{background:rgba(181,101,10,.18);}
+.gbtn{font-family:'JetBrains Mono',monospace;font-size:10px;padding:8px 12px;border-radius:4px;border:1px solid var(--border2);background:none;color:var(--text3);cursor:pointer;}
+/* GANTT */
+.gscroll{overflow-x:auto;border-radius:7px;border:1px solid var(--border);margin-bottom:16px;}
+.gtable{min-width:680px;width:100%;border-collapse:collapse;}
+.gtable th{background:var(--s3);font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text3);padding:6px 4px;text-align:center;border-right:1px solid var(--border);border-bottom:1px solid var(--border2);}
+.gtable th.ltH{text-align:left;padding-left:9px;width:170px;min-width:170px;}
+.gtable th.we{background:#ece5d8;color:#b8ad9d;}
+.gtable th .dn{font-size:11px;font-weight:500;color:var(--text);display:block;}
+.gtable th.we .dn{color:#b8ad9d;}
+.gtable td{border-right:1px solid var(--border);border-bottom:1px solid var(--border);vertical-align:middle;}
+.gtable td.lt{padding:6px 9px;font-size:10px;color:var(--text);background:var(--s2);border-right:1px solid var(--border2);}
+.gtable td.lt .gs{font-size:8px;color:var(--text3);font-family:'JetBrains Mono',monospace;}
+.gtable td.gc{height:28px;padding:0;position:relative;}
+.gtable td.gc.we{background:#f0e9dc;}
+.gtable tr.gr td{background:var(--s3);padding:5px 9px;}
+.gtable tr.gr td.lt{font-family:Bebas Neue,sans-serif;font-size:11px;letter-spacing:2px;background:var(--s3);}
+.gbar{position:absolute;top:50%;transform:translateY(-50%);height:14px;border-radius:3px;display:flex;align-items:center;padding:0 4px;font-family:'JetBrains Mono',monospace;font-size:7px;white-space:nowrap;overflow:hidden;z-index:2;}
+/* PROCUREMENT */
+.ptable{width:100%;border-collapse:collapse;font-size:11px;}
+.ptable th{text-align:left;font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--text3);padding:6px 9px;border-bottom:1px solid var(--border2);background:var(--s2);text-transform:uppercase;}
+.ptable td{padding:7px 9px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top;}
+.ptable tr:last-child td{border-bottom:none;}
+.ptable tr:hover td{background:var(--s1);}
+.ptable td:first-child{color:var(--text);font-weight:600;}
+.pcheck{width:18px;height:18px;border:2px solid var(--border2);border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .15s;background:var(--s1);}
+.pcheck.on{background:var(--green-dim);border-color:var(--green);color:var(--green);}
+.pritag{font-family:'JetBrains Mono',monospace;font-size:8px;padding:2px 5px;border-radius:2px;}
+.pritag.h{background:var(--red-dim);color:var(--red);border:1px solid #f6cdc8;}
+.pritag.m{background:rgba(181,101,10,.1);color:var(--accent);border:1px solid var(--accent-dim);}
+.pritag.l{background:var(--s2);color:var(--text3);border:1px solid var(--border);}
+/* DEPS */
+.dcard{background:var(--s2);border:1px solid var(--border);border-radius:5px;padding:11px 13px;display:flex;gap:9px;align-items:flex-start;margin-bottom:7px;}
+.dicon{font-size:13px;flex-shrink:0;}
+.drule{font-size:12px;font-weight:600;color:var(--text);line-height:1.4;}
+.dnote{font-size:10px;color:var(--text3);margin-top:2px;line-height:1.5;}
+/* WEATHER */
+.wcard{background:rgba(40,104,176,.06);border:1px solid #cfe0f5;border-left:3px solid var(--blue);border-radius:5px;padding:11px 13px;margin-bottom:14px;font-size:11px;color:#3a6a9e;line-height:1.7;}
+/* STORAGE */
+.ccard{background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:14px;margin-bottom:12px;}
+.cdot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;display:inline-block;}
+.cdot.off{background:var(--text3);}
+.cinput{background:var(--s1);border:1px solid var(--border2);color:var(--text);border-radius:4px;padding:6px 9px;font-family:'JetBrains Mono',monospace;font-size:10px;outline:none;width:100%;margin-bottom:7px;}
+/* SITE MAP */
+.smwrap{position:relative;border:2px dashed var(--border2);border-radius:8px;overflow:hidden;background:var(--s2);touch-action:none;user-select:none;}
+.smwrap.drawing{cursor:crosshair;}
+.smwrap canvas{display:block;width:100%;height:auto;}
+.smhint{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);text-align:center;padding:6px;letter-spacing:1px;}
+.smselect{background:var(--s2);border:1px solid var(--border2);color:var(--text);border-radius:4px;padding:7px 10px;font-family:'Syne',sans-serif;font-size:12px;outline:none;flex:1;min-width:120px;}
+/* ZONE PANEL */
+.zoverlay{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:199;display:none;}
+.zoverlay.on{display:block;}
+.zpanel{position:fixed;bottom:0;left:0;right:0;background:var(--s1);border-top:2px solid var(--border2);border-radius:14px 14px 0 0;padding:16px 14px 50px;z-index:200;transform:translateY(100%);transition:transform .3s ease;max-height:75vh;overflow-y:auto;}
+.zpanel.on{transform:translateY(0);}
+.zhandle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 12px;}
+.ztitle{font-family:Bebas Neue,sans-serif;font-size:22px;letter-spacing:2px;color:var(--accent);margin-bottom:2px;}
+.zsub{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);margin-bottom:12px;}
+.ztabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:12px;}
+.ztab{padding:8px 14px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;text-transform:uppercase;}
+.ztab.on{color:var(--accent);border-bottom-color:var(--accent);}
+.ztc{display:none;}
+.ztc.on{display:block;}
+.ideaitem{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);}
+.ideaitem:last-child{border-bottom:none;}
+.ideatxt{font-size:12px;color:var(--text2);flex:1;line-height:1.5;}
+.ideapromote{font-family:'JetBrains Mono',monospace;font-size:8px;padding:3px 7px;border-radius:3px;border:1px solid var(--accent-dim);color:var(--accent);background:none;cursor:pointer;}
+.ideainput{background:var(--s2);border:1px solid var(--border2);color:var(--text);border-radius:4px;padding:8px 10px;font-family:'Syne',sans-serif;font-size:12px;outline:none;flex:1;}
+.ideainput:focus{border-color:var(--accent);}
+@media(max-width:560px){.tright{display:none;}.fgrid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="brand">RENO HQ</div>
+  <button class="ntab on" onclick="showTab('overview')">Overview</button>
+  <button class="ntab" onclick="showTab('projects')">Projects</button>
+  <button class="ntab" onclick="showTab('gantt')">Gantt</button>
+  <button class="ntab" onclick="showTab('procurement')">Procurement</button>
+  <button class="ntab" onclick="showTab('deps')">Rules</button>
+  <button class="ntab" onclick="showTab('storage')">Storage</button>
+  <button class="ntab" onclick="showTab('sitemap')">Site Map</button>
+</nav>
+
+<!-- OVERVIEW -->
+<div id="tab-overview" class="panel on">
+  <div class="ptitle">Project Command Centre</div>
+  <div class="pmeta">HOME RENOVATION · 26 JUN – 7 JUL 2026</div>
+  <div class="badge-row">
+    <div class="badge ok">12 DAYS ON SITE</div>
+    <div class="badge hi">⚡ ORDER BY 19 JUN</div>
+    <div class="badge warn">🌦 WEATHER-SENSITIVE</div>
+  </div>
+  <div class="alert"><strong>⚡ Procurement deadline 19 June:</strong> All materials need 7-day lead time.</div>
+  <div class="stats">
+    <div class="scard"><div class="snum" id="st-proj">0</div><div class="slbl">Sections</div></div>
+    <div class="scard"><div class="snum" id="st-tasks">0</div><div class="slbl">Tasks</div></div>
+    <div class="scard"><div class="snum" id="st-done" style="color:var(--green)">0</div><div class="slbl">Done</div></div>
+    <div class="scard"><div class="snum" id="st-blocked" style="color:var(--red)">0</div><div class="slbl">Blocked</div></div>
+    <div class="scard"><div class="snum" id="st-act">0</div><div class="slbl">Actions</div></div>
+    <div class="scard"><div class="snum" id="st-adone" style="color:var(--green)">0</div><div class="slbl">Ticked</div></div>
+  </div>
+  <div class="prog">
+    <div class="prog-lbl"><span>OVERALL COMPLETION</span><span id="ov-pct">0%</span></div>
+    <div class="prog-outer"><div class="prog-inner" id="ov-bar" style="width:0%"></div></div>
+  </div>
+  <div class="slabel">Sections</div>
+  <div class="vrow">
+    <span>VIEW:</span>
+    <button class="gbtn" onclick="collapseToLevel('sections')" style="font-size:10px;padding:5px 10px;">Sections Only</button>
+    <button class="gbtn" onclick="collapseToLevel('projects')" style="font-size:10px;padding:5px 10px;">+ Phases</button>
+    <button class="gbtn" onclick="collapseToLevel('phases')" style="font-size:10px;padding:5px 10px;">+ Tasks</button>
+    <button class="gbtn" onclick="collapseToLevel('all')" style="font-size:10px;padding:5px 10px;">Expand All</button>
+  </div>
+  <div id="ov-list" class="plist"></div>
+</div>
+
+<!-- PROJECTS -->
+<div id="tab-projects" class="panel">
+  <div class="ptitle">Projects & Tasks</div>
+  <div class="pmeta">DOUBLE-CLICK TEXT TO EDIT · TAP ROW TO EXPAND</div>
+  <div class="vrow">
+    <span>VIEW:</span>
+    <button class="gbtn" onclick="collapseToLevel('sections')" style="font-size:10px;padding:5px 10px;">Sections Only</button>
+    <button class="gbtn" onclick="collapseToLevel('projects')" style="font-size:10px;padding:5px 10px;">+ Phases</button>
+    <button class="gbtn" onclick="collapseToLevel('phases')" style="font-size:10px;padding:5px 10px;">+ Tasks</button>
+    <button class="gbtn" onclick="collapseToLevel('all')" style="font-size:10px;padding:5px 10px;">Expand All</button>
+  </div>
+  <div id="proj-list" class="plist"></div>
+  <div style="margin-top:12px;display:flex;gap:7px;">
+    <button class="btn" onclick="toggleAddProj()">+ Add Section</button>
+  </div>
+  <div class="addcard" id="add-proj-form" style="display:none;margin-top:10px;">
+    <h3>New Section</h3>
+    <div class="fgrid">
+      <div class="ff"><label>Name</label><input id="np-name" placeholder="e.g. Kitchen"></div>
+      <div class="ff"><label>Timeline</label><input id="np-days" placeholder="e.g. Days 3–8"></div>
+    </div>
+    <div class="ff" style="margin-bottom:9px;"><label>Subtitle</label><input id="np-sub" placeholder="e.g. CABINETS · COUNTERTOPS"></div>
+    <div class="ff" style="margin-bottom:11px;">
+      <label>Colour</label>
+      <div class="cswatches" id="cpicker">
+        <div class="cswatch on" style="background:#c43d32" data-c="#c43d32"></div>
+        <div class="cswatch" style="background:#f0a830" data-c="#f0a830"></div>
+        <div class="cswatch" style="background:#2868b0" data-c="#2868b0"></div>
+        <div class="cswatch" style="background:#7a3fd1" data-c="#7a3fd1"></div>
+        <div class="cswatch" style="background:#228a52" data-c="#228a52"></div>
+        <div class="cswatch" style="background:#168f7a" data-c="#168f7a"></div>
+        <div class="cswatch" style="background:#c2531f" data-c="#c2531f"></div>
+        <div class="cswatch" style="background:#6e655a" data-c="#6e655a"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:7px;">
+      <button class="btn" onclick="addProject()">Create</button>
+      <button class="gbtn" onclick="toggleAddProj()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- GANTT -->
+<div id="tab-gantt" class="panel">
+  <div class="ptitle">Gantt Schedule</div>
+  <div class="pmeta">26 JUN – 7 JUL 2026</div>
+  <div class="wcard"><strong>🌦 Weather:</strong> Roof exterior must run on confirmed dry days — 24–48h cure time. Check forecast from 23 June. Shift to interior work if rain hits early.</div>
+  <div class="gscroll"><table class="gtable">
+    <thead><tr>
+      <th class="ltH">TASK</th>
+      <th><span class="dn">26</span>FRI</th><th class="we"><span class="dn">27</span>SAT</th><th class="we"><span class="dn">28</span>SUN</th>
+      <th><span class="dn">29</span>MON</th><th><span class="dn">30</span>TUE</th><th><span class="dn">1</span>WED</th><th><span class="dn">2</span>THU</th>
+      <th class="we"><span class="dn">3</span>FRI</th><th class="we"><span class="dn">4</span>SAT</th>
+      <th><span class="dn">5</span>SUN</th><th><span class="dn">6</span>MON</th><th><span class="dn">7</span>TUE</th>
+    </tr></thead>
+    <tbody id="gantt-body"></tbody>
+  </table></div>
+</div>
+
+<!-- PROCUREMENT -->
+<div id="tab-procurement" class="panel">
+  <div class="ptitle">Procurement</div>
+  <div class="pmeta">ALL ORDERS BY 19 JUNE · 7-DAY LEAD TIME</div>
+  <div class="alert"><strong>Critical:</strong> Order roof exterior materials first — longest lead times.</div>
+  <div id="proc-list"></div>
+</div>
+
+<!-- DEPS -->
+<div id="tab-deps" class="panel">
+  <div class="ptitle">Rules & Dependencies</div>
+  <div class="pmeta">SEQUENCE LOGIC THAT MUST BE RESPECTED</div>
+  <div id="dep-list"></div>
+</div>
+
+<!-- STORAGE -->
+<div id="tab-storage" class="panel">
+  <div class="ptitle">Data Storage</div>
+  <div class="pmeta">BROWSER + GOOGLE SHEETS SYNC</div>
+  <div class="ccard" style="border-color:var(--accent-dim)">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <span style="font-size:18px;">📲</span><strong>Add to Home Screen</strong>
+    </div>
+    <div style="font-size:12px;color:var(--text3);line-height:1.8;margin-bottom:10px;">
+      <strong style="color:var(--text2);">iPad (Safari):</strong> Tap Share → "Add to Home Screen" → Add<br>
+      <strong style="color:var(--text2);">Android (Chrome):</strong> Tap ⋮ → "Add to Home screen"
+    </div>
+  </div>
+  <div class="ccard">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <div class="cdot"></div><strong>Browser localStorage</strong>
+      <span class="badge ok" style="margin-left:auto;">ACTIVE</span>
+    </div>
+    <div style="font-size:11px;color:var(--text3);line-height:1.7;margin-bottom:10px;">All data auto-saves in your browser. Works offline.</div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;">
+      <button class="btn" onclick="exportJSON()">Export JSON</button>
+      <button class="gbtn" onclick="importJSON()">Import JSON</button>
+      <button class="gbtn" style="border-color:var(--red-dim);color:var(--red);" onclick="resetData()">Reset All</button>
+    </div>
+  </div>
+  <div class="ccard">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <div class="cdot off" id="gs-dot"></div><strong>Google Sheets</strong>
+      <span class="badge" id="gs-badge" style="margin-left:auto;">NOT CONNECTED</span>
+    </div>
+    <div style="font-size:11px;color:var(--text3);line-height:1.7;margin-bottom:10px;">Connected — saves to your Google Sheet automatically.</div>
+    <input class="cinput" id="gs-url" value="https://script.google.com/macros/s/AKfycbxPO07cDI-KrPkp_DMPuLpJX8utG29C9AynfvkZ8DOGajSY3f9x6f62Gq2nsM27lRK8vg/exec" readonly>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;">
+      <button class="btn" onclick="connectGS()">Connect & Test</button>
+    </div>
+  </div>
+  <div class="ccard">
+    <div style="font-family:JetBrains Mono,monospace;font-size:9px;color:var(--text3);letter-spacing:2px;margin-bottom:8px;">STATS</div>
+    <div id="storage-stats" style="font-size:11px;color:var(--text3);line-height:2;font-family:'JetBrains Mono',monospace;"></div>
+  </div>
+</div>
+
+<!-- SITE MAP -->
+<div id="tab-sitemap" class="panel">
+  <div class="ptitle">Site Map</div>
+  <div class="pmeta">TAP CORNERS TO DRAW ZONES · TAP ZONE TO VIEW TASKS + IDEAS</div>
+  <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
+    <select class="smselect" id="sm-select" onchange="smSelect(this.value)"><option value="">— Select Layout —</option></select>
+    <button class="btn" onclick="smNew()">+ Layout</button>
+    <button class="gbtn" id="sm-del" onclick="smDel()" style="display:none;border-color:var(--red-dim);color:var(--red);">Delete</button>
+  </div>
+  <div id="sm-none" style="text-align:center;padding:40px 20px;font-size:12px;color:var(--text3);line-height:2;">
+    Create a layout, upload a sketch as background,<br>then tap corners to draw zones.
+  </div>
+  <div id="sm-editor" style="display:none;">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px;align-items:center;">
+      <button class="gbtn" onclick="smUpload()" style="font-size:10px;">📷 Background</button>
+      <button class="gbtn" id="sm-draw-btn" onclick="smStartDraw()" style="font-size:10px;">✏️ Draw Zone</button>
+      <button class="gbtn" id="sm-cancel-btn" onclick="smCancelDraw()" style="display:none;font-size:10px;border-color:var(--red-dim);color:var(--red);">✕ Cancel</button>
+      <button class="gbtn" onclick="smUndo()" style="font-size:10px;">↩ Undo</button>
+    </div>
+    <div class="smhint" id="sm-hint">Tap "Draw Zone" to start placing corners</div>
+    <div class="smwrap" id="sm-wrap"><canvas id="sm-canvas"></canvas></div>
+    <input type="file" id="sm-bg-input" accept="image/*" style="display:none" onchange="smLoadBg(event)">
+  </div>
+</div>
+
+<!-- ZONE PANEL -->
+<div class="zoverlay" id="z-overlay" onclick="closeZone()"></div>
+<div class="zpanel" id="z-panel">
+  <div class="zhandle"></div>
+  <div class="ztitle" id="z-title">Zone</div>
+  <div class="zsub" id="z-sub"></div>
+  <div class="ztabs">
+    <button class="ztab on" onclick="showZTab('tasks')">Tasks</button>
+    <button class="ztab" onclick="showZTab('ideas')">Ideas</button>
+    <button class="ztab" onclick="showZTab('settings')">Settings</button>
+  </div>
+  <div class="ztc on" id="zt-tasks"></div>
+  <div class="ztc" id="zt-ideas"></div>
+  <div class="ztc" id="zt-settings"></div>
+</div>
+
+
+<script>
+// ══ CONFIG ══
+const GS_URL = 'https://script.google.com/macros/s/AKfycbxPO07cDI-KrPkp_DMPuLpJX8utG29C9AynfvkZ8DOGajSY3f9x6f62Gq2nsM27lRK8vg/exec';
+
+// ══ STORAGE ══
+const Store = {
+  gsOk: false,
+  save(d){ try{ localStorage.setItem('reno-hq',JSON.stringify(d)); }catch(e){} if(this.gsOk) this._push(d); },
+  load(){ try{ const r=localStorage.getItem('reno-hq'); return r?JSON.parse(r):null; }catch(e){ return null; } },
+  async _push(d){
+    try{ await fetch(GS_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'save',data:d}),headers:{'Content-Type':'application/json'}}); }
+    catch(e){}
+  },
+  async connect(){
+    try{
+      await fetch(GS_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'ping'}),headers:{'Content-Type':'application/json'}});
+      this.gsOk=true; return true;
+    }catch(e){ return false; }
+  }
+};
+
+// ══ DEFAULT DATA ══
+const DFLT = {projects:[
+  {id:'s1',name:'Section 1 — Entertainment Area',sub:'ROOF · CEILING · FLOORING · PAINTING',color:'#c43d32',days:'26 Jun – 7 Jul',phases:[
+    {id:'s1p1',label:'Phase 1 — Roof',color:'#c43d32',note:'WEATHER DEPENDENT',tasks:[
+      {id:'s1t1',name:'Roof Work',desc:'All roof-related tasks for entertainment area',day:'TBD',tags:['weather','critical'],actions:[{t:'Inspect roof and identify problem areas',o:'You'},{t:'List all materials required',o:'You'},{t:'Add more detail to this task',o:'You'}]}
+    ]},
+    {id:'s1p2',label:'Phase 2 — Interior',color:'#e05040',note:'',tasks:[
+      {id:'s1t2',name:'Interior Finishing',desc:'Ceiling, walls, flooring and painting',day:'TBD',tags:['material'],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]}
+  ]},
+  {id:'s2',name:'Section 2 — Kitchen',sub:'CABINETS · COUNTERTOPS · PLUMBING · PAINTING',color:'#f0a830',days:'26 Jun – 7 Jul',phases:[
+    {id:'s2p1',label:'Phase 1 — Carpentry & Cabinets',color:'#f0a830',note:'BATCH CARPENTRY ACROSS ALL SECTIONS',tasks:[
+      {id:'s2t1',name:'Kitchen Carpentry',desc:'All cabinet and carpentry work',day:'TBD',tags:['batch','material'],actions:[{t:'Measure all cabinet dimensions',o:'You'},{t:'Add detail to this task',o:'You'}]}
+    ]},
+    {id:'s2p2',label:'Phase 2 — Plumbing & Finishing',color:'#c08820',note:'',tasks:[
+      {id:'s2t2',name:'Plumbing & Finishing',desc:'Sink, taps, tiling and painting',day:'TBD',tags:['dep','material'],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]}
+  ]},
+  {id:'s3',name:'Section 3 — Entrance Hallway',sub:'CEILING · FLOORING · PAINTING',color:'#2868b0',days:'26 Jun – 7 Jul',phases:[
+    {id:'s3p1',label:'Phase 1 — Ceiling & Walls',color:'#2868b0',note:'',tasks:[
+      {id:'s3t1',name:'Ceiling & Wall Work',desc:'Ceiling installation, wall prep and painting',day:'TBD',tags:['material'],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]},
+    {id:'s3p2',label:'Phase 2 — Flooring',color:'#1a5090',note:'LAST STEP IN THIS SECTION',tasks:[
+      {id:'s3t2',name:'Flooring',desc:'Lay final floor covering',day:'TBD',tags:['dep'],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]}
+  ]},
+  {id:'s4',name:'Section 4 — Workshop',sub:'STRUCTURE · SHELVING · ELECTRICAL · FLOORING',color:'#7a3fd1',days:'26 Jun – 7 Jul',phases:[
+    {id:'s4p1',label:'Phase 1 — Structure & Shelving',color:'#7a3fd1',note:'',tasks:[
+      {id:'s4t1',name:'Workshop Setup',desc:'All structural, shelving and storage work',day:'TBD',tags:['material'],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]},
+    {id:'s4p2',label:'Phase 2 — Electrical & Finishing',color:'#5a2fa1',note:'CONFIRM ELECTRICAL COMPLIANCE',tasks:[
+      {id:'s4t2',name:'Electrical & Finishing',desc:'Lighting, power points, flooring and painting',day:'TBD',tags:['electrical'],actions:[{t:'Confirm electrical compliance requirements',o:'You'},{t:'Add detail to this task',o:'You'}]}
+    ]}
+  ]},
+  {id:'s5',name:'Section 5 — Lounge',sub:'CEILING · FLOORING · PAINTING · FINISHING',color:'#168f7a',days:'26 Jun – 7 Jul',phases:[
+    {id:'s5p1',label:'Phase 1 — Ceiling & Walls',color:'#168f7a',note:'',tasks:[
+      {id:'s5t1',name:'Ceiling & Wall Work',desc:'Ceiling, cornice, wall prep and painting',day:'TBD',tags:['material'],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]},
+    {id:'s5p2',label:'Phase 2 — Flooring & Finishing',color:'#0e6a5a',note:'',tasks:[
+      {id:'s5t2',name:'Flooring & Finishing',desc:'Floor covering, skirtings and final touches',day:'TBD',tags:['dep'],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]}
+  ]},
+  {id:'s6',name:'Section 6 — Guest Bedroom 1',sub:'CEILING · FLOORING · PAINTING · FINISHING',color:'#228a52',days:'26 Jun – 7 Jul',phases:[
+    {id:'s6p1',label:'Phase 1 — Prep & Ceiling',color:'#228a52',note:'',tasks:[
+      {id:'s6t1',name:'Ceiling & Wall Prep',desc:'Ceiling work, wall prep and painting',day:'TBD',tags:['material'],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]},
+    {id:'s6p2',label:'Phase 2 — Flooring & Finishing',color:'#186a3e',note:'',tasks:[
+      {id:'s6t2',name:'Flooring & Finishing',desc:'Floor, skirtings, doors and final touches',day:'TBD',tags:[],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]}
+  ]},
+  {id:'s7',name:'Section 7 — Guest Bedroom 2',sub:'CEILING · FLOORING · PAINTING · FINISHING',color:'#228a52',days:'26 Jun – 7 Jul',phases:[
+    {id:'s7p1',label:'Phase 1 — Prep & Ceiling',color:'#228a52',note:'',tasks:[
+      {id:'s7t1',name:'Ceiling & Wall Prep',desc:'Ceiling work, wall prep and painting',day:'TBD',tags:['material'],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]},
+    {id:'s7p2',label:'Phase 2 — Flooring & Finishing',color:'#186a3e',note:'',tasks:[
+      {id:'s7t2',name:'Flooring & Finishing',desc:'Floor, skirtings, doors and final touches',day:'TBD',tags:[],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]}
+  ]},
+  {id:'s8',name:'Section 8 — Main Bedroom',sub:'CEILING · FLOORING · PAINTING · FINISHING',color:'#228a52',days:'26 Jun – 7 Jul',phases:[
+    {id:'s8p1',label:'Phase 1 — Prep & Ceiling',color:'#228a52',note:'',tasks:[
+      {id:'s8t1',name:'Ceiling & Wall Prep',desc:'Ceiling work, wall prep and painting',day:'TBD',tags:['material'],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]},
+    {id:'s8p2',label:'Phase 2 — Flooring & Finishing',color:'#186a3e',note:'',tasks:[
+      {id:'s8t2',name:'Flooring & Finishing',desc:'Floor, skirtings, doors and final touches',day:'TBD',tags:[],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]}
+  ]},
+  {id:'s9',name:'Section 9 — Front Porch',sub:'PAVING · WATERPROOFING · PAINTING',color:'#b5650a',days:'26 Jun – 7 Jul',phases:[
+    {id:'s9p1',label:'Phase 1 — Structure & Waterproofing',color:'#b5650a',note:'WEATHER DEPENDENT',tasks:[
+      {id:'s9t1',name:'Waterproofing & Structure',desc:'Waterproofing, structural repairs and paving',day:'TBD',tags:['weather','material'],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]},
+    {id:'s9p2',label:'Phase 2 — Finishing',color:'#8a4a08',note:'',tasks:[
+      {id:'s9t2',name:'Painting & Finishing',desc:'Painting, sealant and final touches',day:'TBD',tags:[],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]}
+  ]},
+  {id:'s10',name:'Section 10 — Side A',sub:'PAVING · DRAINAGE · FINISHING',color:'#c2531f',days:'26 Jun – 7 Jul',phases:[
+    {id:'s10p1',label:'Phase 1 — Groundwork',color:'#c2531f',note:'WEATHER DEPENDENT',tasks:[
+      {id:'s10t1',name:'Paving & Drainage',desc:'All paving, drainage and groundwork on Side A',day:'TBD',tags:['weather','material'],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]},
+    {id:'s10p2',label:'Phase 2 — Finishing',color:'#a04018',note:'',tasks:[
+      {id:'s10t2',name:'Finishing',desc:'Edging, sealant and final touches',day:'TBD',tags:[],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]}
+  ]},
+  {id:'s11',name:'Section 11 — Front of House',sub:'FACADE · PAINTING · PAVING · LANDSCAPING',color:'#c2531f',days:'26 Jun – 7 Jul',phases:[
+    {id:'s11p1',label:'Phase 1 — Facade & Structure',color:'#c2531f',note:'',tasks:[
+      {id:'s11t1',name:'Facade & Structural Work',desc:'All facade, plastering and structural work',day:'TBD',tags:['material'],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]},
+    {id:'s11p2',label:'Phase 2 — Painting & Finishing',color:'#a04018',note:'',tasks:[
+      {id:'s11t2',name:'Painting & Finishing',desc:'Exterior painting, paving and landscaping',day:'TBD',tags:[],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]}
+  ]},
+  {id:'s12',name:'Section 12 — Side B',sub:'PAVING · DRAINAGE · FINISHING',color:'#c2531f',days:'26 Jun – 7 Jul',phases:[
+    {id:'s12p1',label:'Phase 1 — Groundwork',color:'#c2531f',note:'WEATHER DEPENDENT',tasks:[
+      {id:'s12t1',name:'Paving & Drainage',desc:'All paving, drainage and groundwork on Side B',day:'TBD',tags:['weather','material'],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]},
+    {id:'s12p2',label:'Phase 2 — Finishing',color:'#a04018',note:'',tasks:[
+      {id:'s12t2',name:'Finishing',desc:'Edging, sealant and final touches',day:'TBD',tags:[],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]}
+  ]},
+  {id:'s13',name:'Section 13 — Driveway',sub:'PAVING · DRAINAGE · KERBING',color:'#6e655a',days:'26 Jun – 7 Jul',phases:[
+    {id:'s13p1',label:'Phase 1 — Groundwork & Base',color:'#6e655a',note:'WEATHER DEPENDENT',tasks:[
+      {id:'s13t1',name:'Groundwork & Base Prep',desc:'Excavation, base preparation and drainage',day:'TBD',tags:['weather','material','critical'],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]},
+    {id:'s13p2',label:'Phase 2 — Paving & Finishing',color:'#504840',note:'',tasks:[
+      {id:'s13t2',name:'Paving & Finishing',desc:'Paving, kerbing and sealant',day:'TBD',tags:[],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]}
+  ]},
+  {id:'s14',name:'Section 14 — Courtyard',sub:'PAVING · LANDSCAPING · DRAINAGE',color:'#6e655a',days:'26 Jun – 7 Jul',phases:[
+    {id:'s14p1',label:'Phase 1 — Groundwork',color:'#6e655a',note:'',tasks:[
+      {id:'s14t1',name:'Groundwork & Drainage',desc:'Levelling, drainage and base preparation',day:'TBD',tags:['material'],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]},
+    {id:'s14p2',label:'Phase 2 — Paving & Landscaping',color:'#504840',note:'',tasks:[
+      {id:'s14t2',name:'Paving & Landscaping',desc:'Paving, planters, landscaping and finishing',day:'TBD',tags:[],actions:[{t:'Add detail to this task',o:'You'}]}
+    ]}
+  ]}
+],taskStatus:{},actionsDone:{},procDone:{},collapsed:{},siteLayouts:[]};
+
+const PROCUREMENT=[
+  {item:'IBR Roof Sheets',proj:'S1 Roof',pri:'h',by:'19 Jun',note:'Measure area. Confirm profile, gauge, colour.'},
+  {item:'PVC Waterproofing Membrane',proj:'S1 Roof',pri:'h',by:'19 Jun',note:'Check overlap requirements.'},
+  {item:'Fireplace Flashing + Sealant',proj:'S1 Roof',pri:'h',by:'19 Jun',note:'Step flashing, chimney sealant.'},
+  {item:'IBR Fixings — Screws + Washers',proj:'S1 Roof',pri:'h',by:'19 Jun',note:'Match gauge to IBR thickness.'},
+  {item:'Battens + Isotherm Insulation',proj:'S1 Roof',pri:'h',by:'19 Jun',note:'Confirm R-value and batten size.'},
+  {item:'End Guards + Barge Flashings',proj:'S1 Roof',pri:'h',by:'19 Jun',note:'Match IBR profile exactly.'},
+  {item:'Carpentry Batch — All Sections',proj:'All',pri:'m',by:'19 Jun',note:'One order across all sections.'},
+  {item:'Paint — Ceiling White (flat)',proj:'All',pri:'m',by:'19 Jun',note:'Consolidate all ceiling quantities.'},
+  {item:'Paint — Wall White (low sheen)',proj:'All',pri:'m',by:'19 Jun',note:'All wall areas across sections.'},
+  {item:'Primer / Bonding Primer',proj:'All',pri:'m',by:'19 Jun',note:'All new plaster/board surfaces.'},
+  {item:'Bathroom Tiles — Wall + Floor',proj:'S3/S6/S7/S8',pri:'m',by:'19 Jun',note:'Allow 10% extra for cuts.'},
+  {item:'Tile Adhesive + Grout',proj:'S3/S6/S7/S8',pri:'m',by:'19 Jun',note:'Flexible adhesive for floor.'},
+  {item:'Paving Materials',proj:'S9-S14',pri:'m',by:'19 Jun',note:'Confirm quantities per section.'},
+  {item:'Drainage Materials',proj:'S9-S14',pri:'m',by:'19 Jun',note:'Pipes, channels, grates.'},
+  {item:'Flooring — All Sections',proj:'All',pri:'l',by:'22 Jun',note:'Allow acclimatisation time.'}
+];
+
+const DEPS=[
+  {i:'🔒',r:'Roof must be weathertight before any interior work',n:'Complete and water-test roof before starting interior ceiling or wall work.'},
+  {i:'🌦',r:'All exterior work requires dry weather + 24h dry forecast',n:'Check forecast from 23 June. Have interior fallback plan ready.'},
+  {i:'🎨',r:'All surfaces fully prepped before painting starts',n:'No surface gets painted until all boarding, jointing and sanding is complete.'},
+  {i:'🔨',r:'All carpentry batched in one run',n:'Order and build all carpentry across all sections together to save cost.'},
+  {i:'⚡',r:'Verify electrical compliance before any electrical work',n:'Confirm local requirements for downlights and power points.'},
+  {i:'🪜',r:'Roof safety setup before any roof access',n:'Harness, secured ladder, rope access required. Non-negotiable.'},
+  {i:'📋',r:'Materials procurement complete by 19 June',n:'7-day lead time required. Order everything this week.'}
+];
+
+const GANTT=[
+  {g:1,label:'SECTION 1 — ENTERTAINMENT AREA',color:'#c43d32'},
+  {label:'Roof Exterior',sub:'S1',color:'#c43d32',s:0,n:3},
+  {label:'Roof Interior',sub:'S1',color:'#e05040',s:3,n:3},
+  {g:1,label:'SECTION 2 — KITCHEN',color:'#f0a830'},
+  {label:'Carpentry & Cabinets',sub:'S2',color:'#f0a830',s:2,n:4},
+  {label:'Plumbing & Finishing',sub:'S2',color:'#c08820',s:5,n:3},
+  {g:1,label:'SECTIONS 6-8 — BEDROOMS',color:'#228a52'},
+  {label:'Ceiling & Wall Prep',sub:'S6-S8',color:'#228a52',s:3,n:4},
+  {label:'Flooring & Finishing',sub:'S6-S8',color:'#186a3e',s:7,n:3},
+  {g:1,label:'SECTIONS 9-14 — OUTDOOR',color:'#c2531f'},
+  {label:'Groundwork & Drainage',sub:'S9-S14',color:'#c2531f',s:1,n:5},
+  {label:'Paving & Finishing',sub:'S9-S14',color:'#a04018',s:6,n:4},
+  {g:1,label:'CONSOLIDATED TASKS',color:'#6e655a'},
+  {label:'Surface Prep — All Areas',sub:'ALL',color:'#888',s:9,n:1},
+  {label:'Painting — All Areas',sub:'ALL',color:'#6e655a',s:10,n:2}
+];
+
+// ══ STATE ══
+let DB = {};
+function uid(){ return Math.random().toString(36).slice(2,8); }
+function save(){ Store.save(DB); }
+function allTasks(){ const r=[]; DB.projects.forEach(p=>p.phases.forEach(ph=>ph.tasks.forEach(t=>r.push({...t,pid:p.id,phid:ph.id})))); return r; }
+function allActions(){ const r=[]; DB.projects.forEach(p=>p.phases.forEach(ph=>ph.tasks.forEach(t=>t.actions.forEach((a,i)=>r.push({key:t.id+'-'+i,...a}))))); return r; }
+function ts(id){ return DB.taskStatus[id]||'not-started'; }
+function ad(k){ return DB.actionsDone[k]||false; }
+function ck(type,id){ return type+':'+id; }
+function defaultOpen(type){ return type==='proj'||type==='phase'; }
+function isOpen(type,id){ const k=ck(type,id); return k in DB.collapsed ? !DB.collapsed[k] : defaultOpen(type); }
+function ppct(p){ let tot=0,done=0; p.phases.forEach(ph=>ph.tasks.forEach(t=>{ t.actions.forEach((_,i)=>{ tot++; if(ad(t.id+'-'+i)) done++; }); })); return tot===0?0:Math.round((done/tot)*100); }
+
+// ══ INIT ══
+function init(){
+  const saved = Store.load();
+  if(saved && saved.projects && saved.projects.length > 0){
+    DB = saved;
+  } else {
+    DB = JSON.parse(JSON.stringify(DFLT));
+    save();
+  }
+  renderAll();
+  Store.connect().then(ok=>{
+    const dot=document.getElementById('gs-dot');
+    const badge=document.getElementById('gs-badge');
+    if(ok){
+      Store.gsOk=true;
+      if(dot) dot.classList.remove('off');
+      if(badge){ badge.textContent='CONNECTED'; badge.className='badge ok'; }
+      Store.save(DB);
+    }
+    updateStats();
+  });
+}
+
+// ══ COLLAPSE ══
+function toggleEl(type,id,hdr){
+  const cur=isOpen(type,id);
+  DB.collapsed[ck(type,id)]=cur;
+  save();
+  const cont=hdr.closest('[data-'+type+'="'+id+'"]');
+  if(cont) cont.classList.toggle('open',!cur);
+  const car=hdr.querySelector('.caret');
+  if(car) car.style.transform=!cur?'rotate(180deg)':'';
+}
+
+function collapseToLevel(level){
+  DB.projects.forEach(p=>{
+    DB.collapsed[ck('proj',p.id)] = level==='sections';
+    p.phases.forEach(ph=>{
+      DB.collapsed[ck('phase',ph.id)] = !(level==='projects'||level==='phases'||level==='tasks'||level==='all');
+      ph.tasks.forEach(t=>{ DB.collapsed[ck('task',t.id)] = !(level==='tasks'||level==='all'); });
+    });
+  });
+  save();
+  renderProjects();
+}
+
+// ══ INTERACTIONS (no full re-render) ══
+function toggleAction(key,el){
+  DB.actionsDone[key]=!DB.actionsDone[key];
+  save();
+  const on=DB.actionsDone[key];
+  el.classList.toggle('on',on); el.textContent=on?'✓':'';
+  const item=el.closest('.aitem'); if(item) item.classList.toggle('done',on);
+  patchMeta(key.substring(0,key.lastIndexOf('-')));
+  patchBars(); updateStats();
+}
+
+function cycleStatus(id,el){
+  const cyc={'not-started':'in-progress','in-progress':'blocked','blocked':'done','done':'not-started'};
+  DB.taskStatus[id]=cyc[ts(id)]; save();
+  const s=DB.taskStatus[id];
+  el.className='spill '+s; el.textContent=s.replace('-',' ');
+  const row=el.closest('.task');
+  if(row){ const cb=row.querySelector('.tcb'); const d=s==='done'; row.classList.toggle('done',d); if(cb){cb.classList.toggle('on',d);cb.textContent=d?'✓':'';} }
+  patchBars(); updateStats();
+}
+
+function toggleProc(key,el){
+  DB.procDone[key]=!DB.procDone[key]; save();
+  el.classList.toggle('on',DB.procDone[key]); el.textContent=DB.procDone[key]?'✓':'';
+  const row=el.closest('tr'); if(row) row.style.opacity=DB.procDone[key]?'0.45':'1';
+}
+
+function patchMeta(tid){
+  const t=allTasks().find(x=>x.id===tid); if(!t) return;
+  const tot=t.actions.length, done=t.actions.filter((_,i)=>ad(tid+'-'+i)).length;
+  const pct=tot===0?0:Math.round((done/tot)*100);
+  document.querySelectorAll('[data-ac="'+tid+'"]').forEach(e=>e.textContent=done+'/'+tot+' actions');
+  document.querySelectorAll('[data-ap="'+tid+'"]').forEach(e=>e.textContent=pct+'%');
+}
+
+function patchBars(){
+  DB.projects.forEach(p=>{
+    const pct=ppct(p);
+    document.querySelectorAll('[data-pb="'+p.id+'"]').forEach(e=>e.style.width=pct+'%');
+    document.querySelectorAll('[data-pp="'+p.id+'"]').forEach(e=>e.textContent=pct+'%');
+  });
+}
+
+// ══ INLINE EDIT ══
+function ie(el,get,set){
+  if(el.querySelector('input')) return;
+  const orig=get();
+  const inp=document.createElement('input'); inp.className='iinput'; inp.value=orig;
+  el.textContent=''; el.appendChild(inp); inp.focus(); inp.select();
+  function done(){ const v=inp.value.trim()||orig; el.textContent=v; set(v); save(); }
+  inp.addEventListener('blur',done);
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter') inp.blur(); if(e.key==='Escape') el.textContent=orig; });
+  inp.addEventListener('click',e=>e.stopPropagation());
+}
+function editPName(id,el){ const p=DB.projects.find(x=>x.id===id); if(p) ie(el,()=>p.name,v=>p.name=v); }
+function editPSub(id,el){ const p=DB.projects.find(x=>x.id===id); if(p) ie(el,()=>p.sub,v=>p.sub=v); }
+function editPDays(id,el){ const p=DB.projects.find(x=>x.id===id); if(p) ie(el,()=>p.days,v=>p.days=v); }
+function editPhLabel(pid,phid,el){ const ph=DB.projects.find(p=>p.id===pid)?.phases.find(ph=>ph.id===phid); if(ph) ie(el,()=>ph.label,v=>ph.label=v); }
+function editTName(id,el){ const t=allTasks().find(x=>x.id===id); if(t) ie(el,()=>t.name,v=>t.name=v); }
+function editTDesc(id,el){ const t=allTasks().find(x=>x.id===id); if(t) ie(el,()=>t.desc,v=>t.desc=v); }
+function editTDay(id,el){ const t=allTasks().find(x=>x.id===id); if(t) ie(el,()=>t.day,v=>t.day=v); }
+function editATxt(id,i,el){ const t=allTasks().find(x=>x.id===id); if(t) ie(el,()=>t.actions[i].t,v=>t.actions[i].t=v); }
+function editAOwn(id,i,el){ const t=allTasks().find(x=>x.id===id); if(t) ie(el,()=>t.actions[i].o,v=>t.actions[i].o=v); }
+
+// ══ ADD / DELETE ══
+function delProject(id){ if(!confirm('Delete this section?')) return; DB.projects=DB.projects.filter(p=>p.id!==id); save(); renderProjects(); }
+function delPhase(pid,phid){ const p=DB.projects.find(x=>x.id===pid); if(p) p.phases=p.phases.filter(ph=>ph.id!==phid); save(); renderProjects(); }
+function delTask(pid,phid,tid){ const ph=DB.projects.find(p=>p.id===pid)?.phases.find(ph=>ph.id===phid); if(ph) ph.tasks=ph.tasks.filter(t=>t.id!==tid); save(); renderProjects(); }
+function delAction(tid,i){ const t=allTasks().find(x=>x.id===tid); if(t){ t.actions.splice(i,1); save(); renderProjects(); } }
+function addPhase(pid){ const p=DB.projects.find(x=>x.id===pid); if(p){ p.phases.push({id:uid(),label:'New Phase',color:'#888',note:'',tasks:[]}); save(); renderProjects(); } }
+function addTask(pid,phid){ const ph=DB.projects.find(p=>p.id===pid)?.phases.find(ph=>ph.id===phid); if(ph){ ph.tasks.push({id:uid(),name:'New Task',desc:'Double-click to edit',day:'TBD',tags:[],actions:[{t:'First action item',o:'You'}]}); save(); renderProjects(); } }
+function addAction(tid){ const t=allTasks().find(x=>x.id===tid); if(t){ t.actions.push({t:'New action item',o:'You'}); save(); renderProjects(); } }
+
+// ══ ADD PROJECT FORM ══
+let selC='#c43d32';
+function toggleAddProj(){ const f=document.getElementById('add-proj-form'); f.style.display=f.style.display==='none'?'block':'none'; }
+document.addEventListener('click',e=>{ const sw=e.target.closest('.cswatch'); if(sw&&sw.closest('#cpicker')){ document.querySelectorAll('#cpicker .cswatch').forEach(s=>s.classList.remove('on')); sw.classList.add('on'); selC=sw.dataset.c; } });
+function addProject(){
+  const name=document.getElementById('np-name').value.trim();
+  if(!name){ alert('Enter a section name'); return; }
+  DB.projects.push({id:uid(),name,sub:document.getElementById('np-sub').value.trim().toUpperCase()||'NEW SECTION',color:selC,days:document.getElementById('np-days').value.trim()||'TBD',phases:[{id:uid(),label:'Phase 1',color:selC,note:'',tasks:[]}]});
+  save();
+  ['np-name','np-sub','np-days'].forEach(x=>document.getElementById(x).value='');
+  toggleAddProj(); renderProjects();
+}
+
+// ══ RENDER PROJECTS ══
+function renderProjectCard(p,container){
+  const pct=ppct(p), open=isOpen('proj',p.id);
+  const div=document.createElement('div');
+  div.className='pcard'+(open?' open':''); div.dataset.proj=p.id;
+  div.innerHTML=
+    '<div class="phead" onclick="toggleEl('proj',''+p.id+'',this)">'+
+      '<div class="pcol" style="background:'+p.color+'"></div>'+
+      '<div class="pinfo">'+
+        '<div class="pname">'+
+          '<span ondblclick="event.stopPropagation();editPName(''+p.id+'',this)" title="Double-click to edit">'+p.name+'</span>'+
+          '<button class="ebtn del" onclick="event.stopPropagation();delProject(''+p.id+'')" style="font-size:8px;">✕</button>'+
+        '</div>'+
+        '<div class="psub">'+
+          '<span ondblclick="event.stopPropagation();editPSub(''+p.id+'',this)">'+p.sub+'</span>'+
+          ' · <span ondblclick="event.stopPropagation();editPDays(''+p.id+'',this)">'+p.days+'</span>'+
+        '</div>'+
+      '</div>'+
+      '<div class="pright">'+
+        '<span class="ppct" data-pp="'+p.id+'">'+pct+'%</span>'+
+        '<div class="pbar"><div class="pbar-fill" data-pb="'+p.id+'" style="width:'+pct+'%;background:'+p.color+'"></div></div>'+
+        '<div class="caret" style="'+(open?'transform:rotate(180deg)':'')+'">▼</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="pbody">'+
+      p.phases.map(ph=>renderPhase(p.id,ph)).join('')+
+      '<div style="padding:7px 13px;border-top:1px solid var(--border);">'+
+        '<button class="ebtn add" onclick="addPhase(''+p.id+'')">+ Phase</button>'+
+      '</div>'+
+    '</div>';
+  container.appendChild(div);
+}
+
+function renderPhase(pid,ph){
+  const open=isOpen('phase',ph.id);
+  const done=ph.tasks.filter(t=>ts(t.id)==='done').length;
+  return '<div class="phase'+(open?' open':'')+'" data-phase="'+ph.id+'">'+
+    '<div class="phhead" onclick="toggleEl('phase',''+ph.id+'',this)">'+
+      '<span class="phlbl" style="color:'+ph.color+'" ondblclick="event.stopPropagation();editPhLabel(''+pid+'',''+ph.id+'',this)">'+ph.label+'</span>'+
+      (ph.note?'<span class="phnote">'+ph.note+'</span>':'')+
+      '<span class="phcount">'+done+'/'+ph.tasks.length+'</span>'+
+      '<button class="ebtn add" onclick="event.stopPropagation();addTask(''+pid+'',''+ph.id+'')" style="margin-left:6px;">+ Task</button>'+
+      '<button class="ebtn del" onclick="event.stopPropagation();delPhase(''+pid+'',''+ph.id+'')" style="margin-left:4px;">✕</button>'+
+      '<div class="caret" style="margin-left:5px;'+(open?'transform:rotate(180deg)':'')+'">▼</div>'+
+    '</div>'+
+    '<div class="phtasks">'+ph.tasks.map(t=>renderTask(pid,ph.id,t)).join('')+'</div>'+
+  '</div>';
+}
+
+function renderTask(pid,phid,t){
+  const open=isOpen('task',t.id), s=ts(t.id), isDone=s==='done';
+  const tot=t.actions.length, done=t.actions.filter((_,i)=>ad(t.id+'-'+i)).length;
+  const pct=tot===0?0:Math.round((done/tot)*100);
+  return '<div class="task'+(isDone?' done':'')+(open?' open':'')+'" data-task="'+t.id+'">'+
+    '<div class="thead" onclick="toggleEl('task',''+t.id+'',this)">'+
+      '<div class="tcb'+(isDone?' on':'')+'" onclick="event.stopPropagation();cycleStatus(''+t.id+'',this)">'+(isDone?'✓':'')+'</div>'+
+      '<div class="tmain">'+
+        '<div class="tnrow">'+
+          '<span class="tname" ondblclick="event.stopPropagation();editTName(''+t.id+'',this)">'+t.name+'</span>'+
+          '<button class="ebtn del" onclick="event.stopPropagation();delTask(''+pid+'',''+phid+'',''+t.id+'')" style="font-size:7px;">✕</button>'+
+        '</div>'+
+        '<div class="tdesc" ondblclick="event.stopPropagation();editTDesc(''+t.id+'',this)">'+t.desc+'</div>'+
+        '<div class="ttags">'+
+          t.tags.map(tg=>'<span class="ttag '+tg+'">'+tg+'</span>').join('')+
+          '<span class="ttag" data-ac="'+t.id+'">'+done+'/'+tot+' actions</span>'+
+        '</div>'+
+      '</div>'+
+      '<div class="tright">'+
+        '<div class="spill '+s+'" onclick="event.stopPropagation();cycleStatus(''+t.id+'',this)">'+s.replace('-',' ')+'</div>'+
+        '<div class="tdaylbl" ondblclick="event.stopPropagation();editTDay(''+t.id+'',this)">'+t.day+'</div>'+
+        '<div data-ap="'+t.id+'" style="font-family:JetBrains Mono,monospace;font-size:8px;color:var(--text3)">'+pct+'%</div>'+
+      '</div>'+
+      '<div class="caret" style="margin-left:5px;'+(open?'transform:rotate(180deg)':'')+'">▼</div>'+
+    '</div>'+
+    '<div class="tbody">'+
+      '<div class="alist">'+
+        t.actions.map((a,i)=>{
+          const k=t.id+'-'+i, c=ad(k);
+          return '<div class="aitem'+(c?' done':'')+'">'+
+            '<div class="acb'+(c?' on':'')+'" onclick="toggleAction(''+k+'',this)">'+(c?'✓':'')+'</div>'+
+            '<div class="atxt" ondblclick="editATxt(''+t.id+'','+i+',this)">'+a.t+'</div>'+
+            '<div class="aown" ondblclick="editAOwn(''+t.id+'','+i+',this)">'+a.o+'</div>'+
+            '<button class="ebtn del" onclick="delAction(''+t.id+'','+i+')" style="font-size:7px;margin-left:3px;">✕</button>'+
+          '</div>';
+        }).join('')+
+      '</div>'+
+      '<div class="addrow"><button class="ebtn add" onclick="addAction(''+t.id+'')">+ Action</button></div>'+
+    '</div>'+
+  '</div>';
+}
+
+function renderProjects(){
+  ['proj-list','ov-list'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    el.innerHTML='';
+    DB.projects.forEach(p=>renderProjectCard(p,el));
+  });
+  updateStats();
+}
+
+// ══ STATS ══
+function updateStats(){
+  const tasks=allTasks(), actions=allActions();
+  const done=tasks.filter(t=>ts(t.id)==='done').length;
+  const blocked=tasks.filter(t=>ts(t.id)==='blocked').length;
+  const adone=actions.filter(a=>ad(a.key)).length;
+  const pct=actions.length===0?0:Math.round((adone/actions.length)*100);
+  const se=id=>{ const el=document.getElementById(id); if(el) return el; return {textContent:''}; };
+  se('st-proj').textContent=DB.projects.length;
+  se('st-tasks').textContent=tasks.length;
+  se('st-done').textContent=done;
+  se('st-blocked').textContent=blocked;
+  se('st-act').textContent=actions.length;
+  se('st-adone').textContent=adone;
+  se('ov-pct').textContent=pct+'%';
+  const bar=document.getElementById('ov-bar'); if(bar) bar.style.width=pct+'%';
+  const ss=document.getElementById('storage-stats');
+  if(ss) ss.innerHTML='Sections: '+DB.projects.length+'<br>Tasks: '+tasks.length+'<br>Actions: '+actions.length+'<br>Google Sheets: '+(Store.gsOk?'Connected':'Not connected');
+}
+
+// ══ GANTT ══
+function renderGantt(){
+  const tb=document.getElementById('gantt-body'); if(!tb) return;
+  tb.innerHTML='';
+  const WE=[1,2,7,8];
+  DB.projects.forEach(proj=>{
+    const gtr=document.createElement('tr');
+    gtr.className='gr';
+    const gtd=document.createElement('td');
+    gtd.className='lt'; gtd.colSpan=13;
+    gtd.style.cssText='color:'+proj.color+';font-family:Bebas Neue,sans-serif;letter-spacing:2px;font-size:11px;';
+    gtd.textContent=proj.name;
+    gtr.appendChild(gtd);
+    tb.appendChild(gtr);
+    proj.phases.forEach(ph=>{
+      ph.tasks.forEach(t=>{
+        const tr=document.createElement('tr');
+        const ltd=document.createElement('td');
+        ltd.className='lt';
+        ltd.innerHTML='<div>'+t.name+'</div><div class="gs">'+proj.name.split('—')[0].trim()+'</div>';
+        tr.appendChild(ltd);
+        for(let i=0;i<12;i++){
+          const td=document.createElement('td');
+          td.className='gc'+(WE.includes(i)?' we':'');
+          td.style.position='relative';
+          tr.appendChild(td);
+        }
+        tb.appendChild(tr);
+        const dm=t.day.match(/Day[s]?\s*(\d+)[\u2013-]?(\d+)?/i);
+        if(dm){
+          const s=parseInt(dm[1])-1;
+          const e=dm[2]?parseInt(dm[2])-1:s;
+          const span=e-s+1;
+          const tds=tr.querySelectorAll('td.gc');
+          if(tds[s]){
+            const bar=document.createElement('div');
+            bar.className='gbar';
+            bar.style.cssText='background:'+proj.color+';color:#fff;left:2px;width:calc('+span+'*100% - 4px);';
+            bar.textContent=t.name.length>14?t.name.substring(0,13)+'\u2026':t.name;
+            tds[s].appendChild(bar);
+          }
+        }
+      });
+    });
+  });
+}
+
+// ══ PROCUREMENT ══
+function renderProcurement(){
+  const c=document.getElementById('proc-list'); if(!c) return;
+  c.innerHTML='';
+  [{l:'🔴 Critical — Order First',p:'h'},{l:'🟡 Standard — By 19 June',p:'m'},{l:'⚪ Lower Priority',p:'l'}].forEach(g=>{
+    const items=PROCUREMENT.filter(x=>x.pri===g.p); if(!items.length) return;
+    const sec=document.createElement('div'); sec.style.marginBottom='18px';
+    sec.innerHTML='<div style="font-family:Bebas Neue,sans-serif;font-size:15px;letter-spacing:2px;color:var(--text2);margin-bottom:8px;">'+g.l+'</div>'+
+      '<table class="ptable"><thead><tr><th style="width:28px">✓</th><th>Item</th><th>By</th><th>Notes</th></tr></thead><tbody>'+
+      items.map(item=>{
+        const key='proc:'+item.item.replace(/\s+/g,'-');
+        const chk=DB.procDone[key]||false;
+        return '<tr style="'+(chk?'opacity:.45':'')+'">'+
+          '<td><div class="pcheck'+(chk?' on':'')+'" onclick="toggleProc(''+key+'',this)">'+(chk?'✓':'')+'</div></td>'+
+          '<td>'+item.item+'<br><span class="pritag '+item.pri+'" style="margin-top:2px;display:inline-block;">'+item.proj+'</span></td>'+
+          '<td style="font-family:JetBrains Mono,monospace;font-size:9px;color:var(--text3)">'+item.by+'</td>'+
+          '<td style="font-size:10px;color:var(--text3)">'+item.note+'</td></tr>';
+      }).join('')+
+      '</tbody></table>';
+    c.appendChild(sec);
+  });
+}
+
+// ══ DEPS ══
+function renderDeps(){
+  const el=document.getElementById('dep-list'); if(!el) return;
+  el.innerHTML=DEPS.map(d=>'<div class="dcard"><div class="dicon">'+d.i+'</div><div><div class="drule">'+d.r+'</div><div class="dnote">'+d.n+'</div></div></div>').join('');
+}
+
+// ══ STORAGE ACTIONS ══
+function exportJSON(){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(DB,null,2)],{type:'application/json'}));
+  a.download='reno-hq-'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+}
+function importJSON(){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='.json';
+  inp.onchange=e=>{ const r=new FileReader(); r.onload=ev=>{ try{ DB=JSON.parse(ev.target.result); save(); renderAll(); alert('Imported.'); }catch{ alert('Invalid file.'); } }; r.readAsText(e.target.files[0]); };
+  inp.click();
+}
+function resetData(){ if(confirm('Reset ALL data to defaults?')){ DB=JSON.parse(JSON.stringify(DFLT)); save(); renderAll(); } }
+async function connectGS(){
+  const ok=await Store.connect();
+  const dot=document.getElementById('gs-dot'), badge=document.getElementById('gs-badge');
+  if(ok){ Store.gsOk=true; if(dot) dot.classList.remove('off'); if(badge){ badge.textContent='CONNECTED'; badge.className='badge ok'; } Store.save(DB); alert('Connected!'); }
+  else { alert('Connection failed. Check URL.'); }
+}
+
+// ══ SITE MAP ══
+const SM={
+  layouts:[],active:null,drawing:false,pts:[],activeZone:null,
+  cv:null,ctx:null,bg:null,W:0,H:0,
+  init(){
+    this.cv=document.getElementById('sm-canvas');
+    if(!this.cv) return;
+    this.ctx=this.cv.getContext('2d');
+    this.cv.addEventListener('click',e=>this.onClick(e));
+    this.cv.addEventListener('touchend',e=>{
+      e.preventDefault();
+      const t=e.changedTouches[0];
+      this.onClick({clientX:t.clientX,clientY:t.clientY});
+    },{passive:false});
+    this.load();
+  },
+  load(){ this.layouts=DB.siteLayouts||[]; DB.siteLayouts=this.layouts; this.refresh(); },
+  saveDB(){ DB.siteLayouts=this.layouts; save(); },
+  refresh(){
+    const sel=document.getElementById('sm-select'); if(!sel) return;
+    sel.innerHTML='<option value="">— Select Layout —</option>';
+    this.layouts.forEach(l=>{ const o=document.createElement('option'); o.value=l.id; o.textContent=l.name; sel.appendChild(o); });
+    if(this.active) sel.value=this.active.id;
+  },
+  select(id){
+    this.active=this.layouts.find(l=>l.id===id)||null;
+    this.drawing=false; this.pts=[];
+    const ed=document.getElementById('sm-editor'), no=document.getElementById('sm-none'), del=document.getElementById('sm-del');
+    if(this.active){ ed.style.display='block'; no.style.display='none'; if(del) del.style.display=''; this.loadBg(); }
+    else { ed.style.display='none'; no.style.display='block'; if(del) del.style.display='none'; }
+  },
+  newLayout(name){ const l={id:uid(),name,bg:null,zones:[]}; this.layouts.push(l); this.saveDB(); this.refresh(); this.select(l.id); },
+  delLayout(){ if(!this.active||!confirm('Delete layout?')) return; this.layouts=this.layouts.filter(l=>l.id!==this.active.id); this.active=null; this.saveDB(); this.refresh(); this.select(''); },
+  loadBg(){
+    if(!this.active) return;
+    if(this.active.bg){ const img=new Image(); img.onload=()=>{ this.bg=img; this.resize(); this.draw(); }; img.src=this.active.bg; }
+    else { this.bg=null; this.resize(); this.draw(); }
+  },
+  resize(){
+    const wrap=document.getElementById('sm-wrap'); if(!wrap||!this.cv) return;
+    const W=wrap.clientWidth||320;
+    if(this.bg){ this.W=W; this.H=Math.round(W*(this.bg.height/this.bg.width)); }
+    else { this.W=W; this.H=Math.round(W*0.65); }
+    this.cv.width=this.W; this.cv.height=this.H;
+  },
+  setBg(url){ if(!this.active) return; this.active.bg=url; this.saveDB(); this.loadBg(); },
+  startDraw(){
+    this.drawing=true; this.pts=[];
+    const wrap=document.getElementById('sm-wrap'); if(wrap) wrap.classList.add('drawing');
+    const db=document.getElementById('sm-draw-btn'), cb=document.getElementById('sm-cancel-btn');
+    if(db) db.style.display='none'; if(cb) cb.style.display='';
+    const hint=document.getElementById('sm-hint'); if(hint) hint.textContent='Tap corners to draw. Tap first point to close zone.';
+    this.draw();
+  },
+  cancelDraw(){
+    this.drawing=false; this.pts=[];
+    const wrap=document.getElementById('sm-wrap'); if(wrap) wrap.classList.remove('drawing');
+    const db=document.getElementById('sm-draw-btn'), cb=document.getElementById('sm-cancel-btn');
+    if(db) db.style.display=''; if(cb) cb.style.display='none';
+    const hint=document.getElementById('sm-hint'); if(hint) hint.textContent='Tap "Draw Zone" to start placing corners';
+    this.draw();
+  },
+  undo(){ if(this.pts.length>0){ this.pts.pop(); this.draw(); } },
+  onClick(e){
+    const rect=this.cv.getBoundingClientRect();
+    const x=(e.clientX-rect.left)*(this.W/rect.width);
+    const y=(e.clientY-rect.top)*(this.H/rect.height);
+    if(this.drawing){
+      if(this.pts.length>=3&&Math.hypot(x-this.pts[0].x,y-this.pts[0].y)<20){ this.closeZone(); return; }
+      this.pts.push({x,y}); this.draw(); return;
+    }
+    if(this.active){ for(const z of this.active.zones){ if(this.pip({x,y},z.pts)){ this.openZone(z.id); return; } } }
+  },
+  closeZone(){ const name=prompt('Zone name:','New Zone'); if(!name) return; const z={id:uid(),name,sectionId:null,pts:[...this.pts],ideas:[]}; this.active.zones.push(z); this.saveDB(); this.cancelDraw(); this.openZone(z.id); },
+  pip(pt,poly){ let inside=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++){ const xi=poly[i].x,yi=poly[i].y,xj=poly[j].x,yj=poly[j].y; if(((yi>pt.y)!==(yj>pt.y))&&(pt.x<(xj-xi)*(pt.y-yi)/(yj-yi)+xi)) inside=!inside; } return inside; },
+  draw(){
+    if(!this.ctx||!this.cv) return;
+    const ctx=this.ctx;
+    ctx.clearRect(0,0,this.W,this.H);
+    if(this.bg){ ctx.drawImage(this.bg,0,0,this.W,this.H); }
+    else { ctx.fillStyle='#f0ece3'; ctx.fillRect(0,0,this.W,this.H); ctx.fillStyle='#c9bfb0'; ctx.font='12px sans-serif'; ctx.textAlign='center'; ctx.fillText('Upload a sketch as background',this.W/2,this.H/2); }
+    if(this.active){
+      this.active.zones.forEach(z=>{
+        if(z.pts.length<3) return;
+        const proj=DB.projects.find(p=>p.id===z.sectionId);
+        const col=proj?proj.color:'#2868b0';
+        ctx.beginPath(); ctx.moveTo(z.pts[0].x,z.pts[0].y);
+        z.pts.slice(1).forEach(p=>ctx.lineTo(p.x,p.y)); ctx.closePath();
+        ctx.fillStyle=col+'33'; ctx.fill(); ctx.strokeStyle=col; ctx.lineWidth=2; ctx.stroke();
+        const cx=z.pts.reduce((s,p)=>s+p.x,0)/z.pts.length;
+        const cy=z.pts.reduce((s,p)=>s+p.y,0)/z.pts.length;
+        ctx.fillStyle='#2b2722'; ctx.font='bold 12px sans-serif'; ctx.textAlign='center'; ctx.fillText(z.name,cx,cy-4);
+        ctx.font='10px monospace'; ctx.fillStyle=col; ctx.fillText((proj?ppct(proj):0)+'%',cx,cy+12);
+      });
+    }
+    if(this.drawing&&this.pts.length>0){
+      ctx.beginPath(); ctx.moveTo(this.pts[0].x,this.pts[0].y);
+      this.pts.slice(1).forEach(p=>ctx.lineTo(p.x,p.y));
+      ctx.strokeStyle='#2868b0'; ctx.lineWidth=2; ctx.setLineDash([5,4]); ctx.stroke(); ctx.setLineDash([]);
+      this.pts.forEach((p,i)=>{ ctx.beginPath(); ctx.arc(p.x,p.y,i===0?8:5,0,Math.PI*2); ctx.fillStyle=i===0?'#2868b0':'#4a9eff'; ctx.fill(); });
+    }
+  },
+  openZone(zid){
+    if(!this.active) return;
+    const z=this.active.zones.find(x=>x.id===zid); if(!z) return;
+    this.activeZone=zid;
+    const proj=DB.projects.find(p=>p.id===z.sectionId);
+    document.getElementById('z-title').textContent=z.name;
+    document.getElementById('z-sub').textContent=proj?proj.name:'No section linked';
+    // Tasks
+    const te=document.getElementById('zt-tasks');
+    if(proj){
+      const tasks=proj.phases.flatMap(ph=>ph.tasks);
+      const done=tasks.filter(t=>ts(t.id)==='done').length;
+      te.innerHTML='<div style="display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap;">'+
+        '<div class="scard" style="flex:1;min-width:70px;"><div class="snum" style="font-size:20px;">'+tasks.length+'</div><div class="slbl">Tasks</div></div>'+
+        '<div class="scard" style="flex:1;min-width:70px;"><div class="snum" style="font-size:20px;color:var(--green)">'+done+'</div><div class="slbl">Done</div></div>'+
+        '</div>'+
+        tasks.map(t=>'<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">'+
+          '<div class="spill '+ts(t.id)+'" style="flex-shrink:0;">'+ts(t.id).replace('-',' ')+'</div>'+
+          '<div style="font-size:12px;color:var(--text);flex:1;">'+t.name+'</div></div>').join('')+
+        '<div style="margin-top:10px;"><button class="gbtn" onclick="showTab('projects');closeZone()" style="font-size:10px;">Go to Section →</button></div>';
+    } else { te.innerHTML='<div style="font-size:12px;color:var(--text3);padding:10px 0;">Link this zone to a section in Settings.</div>'; }
+    // Ideas
+    this.renderIdeas(z);
+    // Settings
+    const se=document.getElementById('zt-settings');
+    se.innerHTML='<div class="ff" style="margin-bottom:10px;"><label>Zone Name</label>'+
+      '<input class="iinput" value="'+z.name+'" onchange="SM.renameZone(''+zid+'',this.value)" style="margin-top:4px;"></div>'+
+      '<div class="ff" style="margin-bottom:10px;"><label>Linked Section</label>'+
+      '<select class="smselect" onchange="SM.linkSection(''+zid+'',this.value)" style="margin-top:4px;">'+
+        '<option value="">— None —</option>'+
+        DB.projects.map(p=>'<option value="'+p.id+'"'+(z.sectionId===p.id?' selected':'')+'>'+p.name+'</option>').join('')+
+      '</select></div>'+
+      '<button class="gbtn" onclick="SM.delZone(''+zid+'')" style="border-color:var(--red-dim);color:var(--red);font-size:10px;">Delete Zone</button>';
+    showZTab('tasks');
+    document.getElementById('z-panel').classList.add('on');
+    document.getElementById('z-overlay').classList.add('on');
+  },
+  renderIdeas(z){
+    const el=document.getElementById('zt-ideas'); if(!el) return;
+    el.innerHTML=(z.ideas.length===0?'<div style="font-size:12px;color:var(--text3);padding:8px 0;">No ideas yet.</div>':'')+
+      z.ideas.map((idea,i)=>'<div class="ideaitem">'+
+        '<div class="ideatxt">'+idea.text+'</div>'+
+        '<button class="ideapromote" onclick="SM.promoteIdea(''+z.id+'','+i+')">→ Task</button>'+
+        '<button class="ebtn del" onclick="SM.delIdea(''+z.id+'','+i+')" style="font-size:8px;">✕</button>'+
+      '</div>').join('')+
+      '<div style="display:flex;gap:7px;margin-top:10px;">'+
+        '<input class="ideainput" id="idea-inp-'+z.id+'" placeholder="Add an idea…">'+
+        '<button class="btn" onclick="SM.addIdea(''+z.id+'')" style="font-size:10px;padding:7px 12px;">Add</button>'+
+      '</div>';
+  },
+  addIdea(zid){ const z=this.active&&this.active.zones.find(x=>x.id===zid); if(!z) return; const inp=document.getElementById('idea-inp-'+zid); const txt=inp&&inp.value.trim(); if(!txt) return; z.ideas.push({text:txt,created:new Date().toISOString()}); this.saveDB(); inp.value=''; this.renderIdeas(z); },
+  delIdea(zid,i){ const z=this.active&&this.active.zones.find(x=>x.id===zid); if(!z) return; z.ideas.splice(i,1); this.saveDB(); this.renderIdeas(z); },
+  promoteIdea(zid,i){ const z=this.active&&this.active.zones.find(x=>x.id===zid); if(!z||!z.sectionId){ alert('Link zone to a section first in Settings.'); return; } const proj=DB.projects.find(p=>p.id===z.sectionId); if(!proj||!proj.phases.length) return; const idea=z.ideas[i]; proj.phases[0].tasks.push({id:uid(),name:idea.text,desc:'Promoted from Site Map',day:'TBD',tags:[],actions:[{t:'Define scope for this task',o:'You'}]}); z.ideas.splice(i,1); this.saveDB(); this.renderIdeas(z); alert('"'+idea.text+'" added to '+proj.name); },
+  renameZone(zid,name){ const z=this.active&&this.active.zones.find(x=>x.id===zid); if(!z) return; z.name=name; document.getElementById('z-title').textContent=name; this.saveDB(); this.draw(); },
+  linkSection(zid,sid){ const z=this.active&&this.active.zones.find(x=>x.id===zid); if(!z) return; z.sectionId=sid||null; const proj=DB.projects.find(p=>p.id===sid); document.getElementById('z-sub').textContent=proj?proj.name:'No section linked'; this.saveDB(); this.draw(); this.openZone(zid); },
+  delZone(zid){ if(!confirm('Delete zone?')) return; this.active.zones=this.active.zones.filter(z=>z.id!==zid); this.saveDB(); closeZone(); this.draw(); }
+};
+
+function smNew(){ const name=prompt('Layout name:','Main House'); if(name) SM.newLayout(name); }
+function smSelect(id){ SM.select(id); }
+function smDel(){ SM.delLayout(); }
+function smUpload(){ document.getElementById('sm-bg-input').click(); }
+function smLoadBg(e){ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>SM.setBg(ev.target.result); r.readAsDataURL(f); }
+function smStartDraw(){ SM.startDraw(); }
+function smCancelDraw(){ SM.cancelDraw(); }
+function smUndo(){ SM.undo(); }
+function showZTab(name){
+  document.querySelectorAll('.ztab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.ztc').forEach(t=>t.classList.remove('on'));
+  const btn=document.querySelector('.ztab[onclick="showZTab(''+name+'')"]');
+  if(btn) btn.classList.add('on');
+  const tc=document.getElementById('zt-'+name); if(tc) tc.classList.add('on');
+}
+function closeZone(){ document.getElementById('z-panel').classList.remove('on'); document.getElementById('z-overlay').classList.remove('on'); SM.activeZone=null; }
+
+// ══ TAB NAV ══
+function showTab(name){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
+  const panel=document.getElementById('tab-'+name); if(panel) panel.classList.add('on');
+  const btn=document.querySelector('.ntab[onclick="showTab(''+name+'')"]'); if(btn) btn.classList.add('on');
+  if(name==='sitemap'){ SM.resize(); SM.draw(); }
+}
+
+// ══ RENDER ALL ══
+function renderAll(){
+  renderProjects();
+  renderGantt();
+  renderProcurement();
+  renderDeps();
+  updateStats();
+}
+
+// ══ START ══
+const APP_VER = 'v6';
+if(localStorage.getItem('reno-ver') !== APP_VER){
+  localStorage.removeItem('reno-hq');
+  localStorage.setItem('reno-ver', APP_VER);
+}
+init();
+SM.init();
+</script>
+</body>
+</html>
