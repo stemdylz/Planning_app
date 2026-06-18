@@ -242,6 +242,7 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
     <div class="prog-lbl"><span>OVERALL COMPLETION</span><span id="ov-pct">0%</span></div>
     <div class="prog-outer"><div class="prog-inner" id="ov-bar" style="width:0%"></div></div>
   </div>
+  <div id="debug-panel" style="background:#2b2722;color:#50c870;font-family:monospace;font-size:11px;padding:10px;border-radius:6px;margin-bottom:12px;white-space:pre-wrap;"></div>
   <div class="slabel">Sections</div>
   <div class="vrow">
     <span>VIEW:</span>
@@ -608,14 +609,20 @@ function isOpen(type,id){ const k=ck(type,id); return k in DB.collapsed ? !DB.co
 function ppct(p){ let tot=0,done=0; p.phases.forEach(ph=>ph.tasks.forEach(t=>{ t.actions.forEach((_,i)=>{ tot++; if(ad(t.id+'-'+i)) done++; }); })); return tot===0?0:Math.round((done/tot)*100); }
 
 // ══ INIT ══
+function dbg(msg){ const el=document.getElementById('debug-panel'); if(el) el.textContent+=msg+'\n'; console.log(msg); }
 function init(){
+  dbg('init() started');
   const saved = Store.load();
+  dbg('localStorage: '+(saved ? 'found, projects='+saved.projects.length : 'null'));
   if(saved && saved.projects && saved.projects.length > 0){
     DB = saved;
+    dbg('Using saved data');
   } else {
     DB = JSON.parse(JSON.stringify(DFLT));
+    dbg('Using DFLT, projects='+DB.projects.length);
     save();
   }
+  dbg('Before renderAll: projects='+DB.projects.length);
   renderAll();
   Store.connect().then(ok=>{
     const dot=document.getElementById('gs-dot');
@@ -862,10 +869,18 @@ function renderTask(pid,phid,t){
 
 
 function renderProjects(){
+  dbg('renderProjects: projects='+(DB.projects?DB.projects.length:'undefined'));
   ['proj-list','ov-list'].forEach(id=>{
-    const el=document.getElementById(id); if(!el) return;
+    const el=document.getElementById(id);
+    dbg('#'+id+': '+(el?'found':'MISSING'));
+    if(!el) return;
     el.innerHTML='';
-    DB.projects.forEach(p=>renderProjectCard(p,el));
+    try{
+      DB.projects.forEach(p=>renderProjectCard(p,el));
+      dbg('Rendered '+DB.projects.length+' projects to #'+id);
+    }catch(err){
+      dbg('ERROR in renderProjectCard: '+err.message);
+    }
   });
   updateStats();
 }
