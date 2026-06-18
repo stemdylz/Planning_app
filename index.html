@@ -113,6 +113,23 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .spill.blocked{border-color:var(--red);color:var(--red);background:rgba(196,61,50,.1);}
 .spill.done{border-color:var(--green);color:var(--green);background:rgba(34,138,82,.1);}
 .tdaylbl{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text3);}
+.daypicker{display:flex;align-items:center;gap:3px;background:var(--s2);border:1px solid var(--border2);border-radius:4px;padding:3px 6px;cursor:pointer;}
+.daypicker:hover{border-color:var(--accent);}
+.daypicker span{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);}
+.daypicker strong{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--accent);}
+.daymodal{position:fixed;inset:0;z-index:300;display:flex;align-items:flex-end;justify-content:center;}
+.daymodal-bg{position:absolute;inset:0;background:rgba(0,0,0,.3);}
+.daymodal-box{position:relative;background:var(--s1);border-radius:14px 14px 0 0;padding:20px 16px 40px;width:100%;max-width:480px;z-index:1;}
+.daymodal-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px;color:var(--accent);margin-bottom:14px;}
+.dayslider-row{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
+.dayslider-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;}
+.dayslider{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:var(--border);outline:none;}
+.dayslider::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.2);}
+.dayslider-val{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--accent);text-align:center;margin-top:2px;}
+.day-range-display{background:var(--s2);border-radius:8px;padding:12px;text-align:center;margin-bottom:14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);}
+.day-range-display strong{color:var(--accent);font-size:14px;}
+.phdates{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);margin-left:4px;}
+.secdates{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);}
 .tbody{display:none;margin-top:5px;}
 .task.open > .thead .caret{transform:rotate(180deg);}
 .task.open > .tbody{display:block;}
@@ -756,9 +773,11 @@ function renderProjectCard(p, container) {
   ap(nrow, nspan, dbtn);
   var subrow = mk('div', 'psub');
   var subspan = makeEditable(mk('span', '', p.sub), function() { return p.sub; }, function(v) { p.sub = v; });
-  var dot = mk('span', '', ' - ');
-  var dayspan = makeEditable(mk('span', '', p.days), function() { return p.days; }, function(v) { p.days = v; });
-  ap(subrow, subspan, dot, dayspan);
+  var dot = mk('span', '', ' ');
+  var secD = getSecDates(p);
+  var secdlbl = mk('span', 'secdates', secD ? 'Day ' + secD.s + (secD.e !== secD.s ? ' - ' + secD.e : '') : p.days);
+  secdlbl.dataset.secdates = p.id;
+  ap(subrow, subspan, dot, secdlbl);
   ap(info, nrow, subrow);
 
   var right = mk('div', 'pright');
@@ -797,7 +816,9 @@ function renderPhaseEl(pid, ph) {
   dbtn.addEventListener('click', function(e) { e.stopPropagation(); delPhase(pid, ph.id); });
   var car = mk('div', 'caret', '\u25bc'); car.style.marginLeft = '5px';
   if (open) car.style.transform = 'rotate(180deg)';
-  ap(head, lbl); if (note) head.appendChild(note); ap(head, cnt, abtn, dbtn, car);
+  var phd = getPhDates(ph);
+  var phdlbl = mk('span', 'phdates', phd ? 'D' + phd.s + (phd.e !== phd.s ? '-' + phd.e : '') : '');
+  ap(head, lbl); if (note) head.appendChild(note); ap(head, phdlbl, cnt, abtn, dbtn, car);
   head.addEventListener('click', function() { toggleEl('phase', ph.id, head); });
   var tasks = mk('div', 'phtasks');
   ph.tasks.forEach(function(t) { tasks.appendChild(renderTaskEl(pid, ph.id, t)); });
@@ -830,7 +851,12 @@ function renderTaskEl(pid, phid, t) {
   var tright = mk('div', 'tright');
   var spill = mk('div', 'spill ' + s, s.replace('-', ' '));
   spill.addEventListener('click', function(e) { e.stopPropagation(); cycleStatus(t.id, spill); });
-  var dlbl = makeEditable(mk('div', 'tdaylbl', t.day), function() { return t.day; }, function(v) { t.day = v; });
+  var dlbl = mk('div', 'daypicker');
+  dlbl.dataset.tid = t.id;
+  var dlblDays = parseDays(t.day);
+  var dlblSpan = mk('span'); dlblSpan.innerHTML = formatDayLabel(dlblDays.s, dlblDays.e);
+  dlbl.appendChild(dlblSpan);
+  dlbl.addEventListener('click', function(ev) { ev.stopPropagation(); openDayPicker(t.id, dlbl, dlblSpan); });
   var apct = mk('div', '', pct + '%'); apct.style.cssText = 'font-size:8px;color:var(--text3)'; apct.dataset.ap = t.id;
   ap(tright, spill, dlbl, apct);
   var tcar = mk('div', 'caret', '\u25bc'); tcar.style.marginLeft = '5px';
