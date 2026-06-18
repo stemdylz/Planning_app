@@ -242,7 +242,6 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
     <div class="prog-lbl"><span>OVERALL COMPLETION</span><span id="ov-pct">0%</span></div>
     <div class="prog-outer"><div class="prog-inner" id="ov-bar" style="width:0%"></div></div>
   </div>
-  <div id="debug-panel" style="background:#2b2722;color:#50c870;font-family:monospace;font-size:11px;padding:10px;border-radius:6px;margin-bottom:12px;white-space:pre-wrap;"></div>
   <div class="slabel">Sections</div>
   <div class="vrow">
     <span>VIEW:</span>
@@ -609,20 +608,14 @@ function isOpen(type,id){ const k=ck(type,id); return k in DB.collapsed ? !DB.co
 function ppct(p){ let tot=0,done=0; p.phases.forEach(ph=>ph.tasks.forEach(t=>{ t.actions.forEach((_,i)=>{ tot++; if(ad(t.id+'-'+i)) done++; }); })); return tot===0?0:Math.round((done/tot)*100); }
 
 // ══ INIT ══
-function dbg(msg){ const el=document.getElementById('debug-panel'); if(el) el.textContent+=msg+'\n'; console.log(msg); }
 function init(){
-  dbg('init() started');
   const saved = Store.load();
-  dbg('localStorage: '+(saved ? 'found, projects='+saved.projects.length : 'null'));
   if(saved && saved.projects && saved.projects.length > 0){
     DB = saved;
-    dbg('Using saved data');
-  } else {
+    } else {
     DB = JSON.parse(JSON.stringify(DFLT));
-    dbg('Using DFLT, projects='+DB.projects.length);
-    save();
+      save();
   }
-  dbg('Before renderAll: projects='+DB.projects.length);
   renderAll();
   Store.connect().then(ok=>{
     const dot=document.getElementById('gs-dot');
@@ -822,7 +815,7 @@ function renderPhase(pid,ph){
       <span class="phcount">${done}/${ph.tasks.length}</span>
       <button class="ebtn add" data-action="addTask" data-id="${pid}" data-id2="${ph.id}" style="margin-left:6px;">+ Task</button>
       <button class="ebtn del" data-action="delPhase" data-id="${pid}" data-id2="${ph.id}" style="margin-left:4px;">&#x2715;</button>
-      <div class="caret" style="margin-left:5px;${open?'transform:rotate(180deg)':''}>&#x25bc;</div>
+      <div class="caret" style="margin-left:5px;${open?'transform:rotate(180deg)':''}">&#x25bc;</div>
     </div>
     <div class="phtasks">${ph.tasks.map(t=>renderTask(pid,ph.id,t)).join('')}</div>
   </div>`;
@@ -835,7 +828,7 @@ function renderTask(pid,phid,t){
   const tags=t.tags.map(tg=>`<span class="ttag ${tg}">${tg}</span>`).join('');
   const actions=t.actions.map((a,i)=>{
     const k=t.id+'-'+i, checked=ad(k);
-    return `<div class="aitem${checked?' done':''}>
+    return `<div class="aitem${checked?' done':''}">
       <div class="acb${checked?' on':''}" data-action="toggleAction" data-key="${k}">${checked?'&#x2713;':''}</div>
       <div class="atxt editable" data-field="atxt" data-id="${t.id}" data-idx="${i}">${a.t}</div>
       <div class="aown editable" data-field="aown" data-id="${t.id}" data-idx="${i}">${a.o}</div>
@@ -858,7 +851,7 @@ function renderTask(pid,phid,t){
         <div class="tdaylbl editable" data-field="tday" data-id="${t.id}">${t.day}</div>
         <div data-ap="${t.id}" style="font-size:8px;color:var(--text3)">${pct}%</div>
       </div>
-      <div class="caret" style="margin-left:5px;${open?'transform:rotate(180deg)':''}>&#x25bc;</div>
+      <div class="caret" style="margin-left:5px;${open?'transform:rotate(180deg)':''}">&#x25bc;</div>
     </div>
     <div class="tbody">
       <div class="alist">${actions}</div>
@@ -869,18 +862,10 @@ function renderTask(pid,phid,t){
 
 
 function renderProjects(){
-  dbg('renderProjects: projects='+(DB.projects?DB.projects.length:'undefined'));
   ['proj-list','ov-list'].forEach(id=>{
-    const el=document.getElementById(id);
-    dbg('#'+id+': '+(el?'found':'MISSING'));
-    if(!el) return;
+    const el=document.getElementById(id); if(!el) return;
     el.innerHTML='';
-    try{
-      DB.projects.forEach(p=>renderProjectCard(p,el));
-      dbg('Rendered '+DB.projects.length+' projects to #'+id);
-    }catch(err){
-      dbg('ERROR in renderProjectCard: '+err.message);
-    }
+    DB.projects.forEach(p=>renderProjectCard(p,el));
   });
   updateStats();
 }
