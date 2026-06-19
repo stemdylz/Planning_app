@@ -30,9 +30,12 @@ body{padding-top:14px;}
 
 /* FLOATING NAV DOT */
 .navdot{position:fixed;width:50px;height:50px;border-radius:50%;background:var(--accent);box-shadow:0 4px 16px rgba(181,101,10,.35),0 1px 4px rgba(0,0,0,.15);z-index:170;display:flex;align-items:center;justify-content:center;cursor:grab;transition:width .25s cubic-bezier(.4,0,.2,1),height .25s cubic-bezier(.4,0,.2,1),opacity .25s,box-shadow .25s,background .2s;-webkit-tap-highlight-color:transparent;touch-action:none;}
+.navdot::before{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:54px;height:54px;border-radius:50%;}
 .navdot:active{cursor:grabbing;}
 .navdot.dragging{transition:none;box-shadow:0 8px 24px rgba(0,0,0,.3);}
-.navdot.idle{width:14px;height:14px;opacity:.55;box-shadow:0 2px 8px rgba(181,101,10,.25);}
+.navdot.idle{width:20px;height:20px;opacity:.6;box-shadow:0 2px 8px rgba(181,101,10,.25);}
+.showmenu-btn{display:inline-flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--accent);background:var(--adim);border:1px solid var(--accent-dim,var(--adim));border-radius:6px;padding:6px 11px;margin-bottom:12px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.showmenu-btn:active{opacity:.7;}
 .navdot.open{background:var(--text);transform:rotate(135deg);}
 .navdot-icon{width:18px;height:18px;position:relative;}
 .navdot-icon span{position:absolute;background:#fff;border-radius:2px;transition:all .25s;}
@@ -292,6 +295,7 @@ body{padding-top:14px;}
 <div id="tab-overview" class="panel on">
   <div class="ptitle">Project Command Centre</div>
   <div class="pmeta">HOME RENOVATION · 26 JUN – 7 JUL 2026</div>
+  <button class="showmenu-btn" onclick="toggleNav()">&#9776; Show Menu</button>
   <div class="brow">
     <div class="badge ok">12 DAYS ON SITE</div>
     <div class="badge hi">&#9889; ORDER BY 19 JUN</div>
@@ -325,6 +329,7 @@ body{padding-top:14px;}
 <div id="tab-projects" class="panel">
   <div class="ptitle">Projects &amp; Tasks</div>
   <div class="pmeta">DOUBLE-CLICK TEXT TO EDIT &#183; TAP ROW TO EXPAND</div>
+  <button class="showmenu-btn" onclick="toggleNav()">&#9776; Show Menu</button>
   <div class="vrow">
     <span>VIEW:</span>
     <button class="gbtn" onclick="collapseToLevel('sections')">Sections Only</button>
@@ -367,6 +372,7 @@ body{padding-top:14px;}
 <div id="tab-gantt" class="panel">
   <div class="ptitle">Gantt Schedule</div>
   <div class="pmeta">26 JUN – 7 JUL 2026</div>
+  <button class="showmenu-btn" onclick="toggleNav()">&#9776; Show Menu</button>
   <div class="wcard"><strong>&#127750; Weather:</strong> Roof exterior must run on confirmed dry days. Check forecast from 23 June. Shift to interior work if rain hits early.</div>
   <div class="gscroll"><table class="gtbl" id="gantt-tbl">
     <thead><tr>
@@ -396,6 +402,7 @@ body{padding-top:14px;}
 <div id="tab-rules" class="panel">
   <div class="ptitle">Rules &amp; Dependencies</div>
   <div class="pmeta">SEQUENCE LOGIC THAT MUST BE RESPECTED</div>
+  <button class="showmenu-btn" onclick="toggleNav()">&#9776; Show Menu</button>
   <div id="dep-list"></div>
 </div>
 
@@ -403,6 +410,7 @@ body{padding-top:14px;}
 <div id="tab-storage" class="panel">
   <div class="ptitle">Data Storage</div>
   <div class="pmeta">BROWSER + GOOGLE SHEETS SYNC</div>
+  <button class="showmenu-btn" onclick="toggleNav()">&#9776; Show Menu</button>
   <div class="ccard" style="border-color:var(--adim)">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
       <span style="font-size:18px;">&#128242;</span><strong>Add to Home Screen</strong>
@@ -443,6 +451,7 @@ body{padding-top:14px;}
 <div id="tab-sitemap" class="panel">
   <div class="ptitle">Site Map</div>
   <div class="pmeta">TAP CORNERS TO DRAW ZONES · TAP ZONE TO VIEW TASKS + IDEAS</div>
+  <button class="showmenu-btn" onclick="toggleNav()">&#9776; Show Menu</button>
   <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
     <select class="smsel" id="sm-select" onchange="smSelect(this.value)"><option value="">— Select Layout —</option></select>
     <button class="btn" onclick="smNew()">+ Layout</button>
@@ -728,7 +737,7 @@ var DEPS = [
 
 // ── STATE ──────────────────────────────────────────
 var DB = {};
-var APP_VER = 'v17';
+var APP_VER = 'v18';
 
 function uid() { return Math.random().toString(36).slice(2, 8); }
 function save() { Store.save(DB); }
