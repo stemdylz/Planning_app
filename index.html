@@ -29,9 +29,10 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 body{padding-top:14px;}
 
 /* FLOATING NAV DOT */
-.navdot{position:fixed;bottom:22px;right:18px;width:50px;height:50px;border-radius:50%;background:var(--accent);box-shadow:0 4px 16px rgba(181,101,10,.35),0 1px 4px rgba(0,0,0,.15);z-index:160;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .25s cubic-bezier(.4,0,.2,1);-webkit-tap-highlight-color:transparent;}
-.navdot:active{transform:scale(0.9);}
-.navdot.idle{width:14px;height:14px;bottom:18px;right:18px;opacity:.55;box-shadow:0 2px 8px rgba(181,101,10,.25);}
+.navdot{position:fixed;width:50px;height:50px;border-radius:50%;background:var(--accent);box-shadow:0 4px 16px rgba(181,101,10,.35),0 1px 4px rgba(0,0,0,.15);z-index:170;display:flex;align-items:center;justify-content:center;cursor:grab;transition:width .25s cubic-bezier(.4,0,.2,1),height .25s cubic-bezier(.4,0,.2,1),opacity .25s,box-shadow .25s,background .2s;-webkit-tap-highlight-color:transparent;touch-action:none;}
+.navdot:active{cursor:grabbing;}
+.navdot.dragging{transition:none;box-shadow:0 8px 24px rgba(0,0,0,.3);}
+.navdot.idle{width:14px;height:14px;opacity:.55;box-shadow:0 2px 8px rgba(181,101,10,.25);}
 .navdot.open{background:var(--text);transform:rotate(135deg);}
 .navdot-icon{width:18px;height:18px;position:relative;}
 .navdot-icon span{position:absolute;background:#fff;border-radius:2px;transition:all .25s;}
@@ -42,6 +43,14 @@ body{padding-top:14px;}
 .navdot.open .navdot-icon span:nth-child(2){opacity:0;}
 .navscrim{position:fixed;inset:0;background:rgba(0,0,0,.15);z-index:140;display:none;}
 .navscrim.show{display:block;}
+
+/* RADIAL MENU */
+.radial-item{position:fixed;width:46px;height:46px;border-radius:50%;background:var(--s1);border:1.5px solid var(--border2);box-shadow:0 3px 10px rgba(0,0,0,.15);z-index:165;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transform:scale(0.3);transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .2s;-webkit-tap-highlight-color:transparent;}
+.radial-item.show{opacity:1;transform:scale(1);}
+.radial-item.on{background:var(--accent);border-color:var(--accent);}
+.radial-icon{font-size:18px;line-height:1;}
+.radial-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--text3);white-space:nowrap;letter-spacing:.5px;}
+.radial-item.on .radial-label{color:var(--accent);}
 .brand{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:2px;color:var(--accent);white-space:nowrap;margin-right:14px;padding:12px 0;}
 .ntab{padding:12px 10px;font-size:10px;font-family:'JetBrains Mono',monospace;letter-spacing:1px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;transition:all .2s;}
 .ntab:hover{color:var(--text2);}
@@ -273,9 +282,10 @@ body{padding-top:14px;}
 </nav>
 
 <div class="navscrim" id="nav-scrim" onclick="closeNav()"></div>
-<div class="navdot idle" id="nav-dot" onclick="toggleNav()">
+<div class="navdot idle" id="nav-dot">
   <div class="navdot-icon"><span></span><span></span><span></span></div>
 </div>
+<div id="radial-menu"></div>
 
 <!-- OVERVIEW -->
 <div id="tab-overview" class="panel on">
@@ -379,11 +389,6 @@ body{padding-top:14px;}
     </tbody>
     <tbody id="gantt-body"></tbody>
   </table></div>
-</div>
-
-  <div class="pmeta">ALL ORDERS BY 19 JUNE · 7-DAY LEAD TIME</div>
-  <div class="alert"><strong>Critical:</strong> Order roof exterior materials first.</div>
-  <div id="proc-list"></div>
 </div>
 
 <!-- RULES -->
@@ -1176,39 +1181,7 @@ function renderGantt() {
 
 
 // ── PROCUREMENT ───────────────────────────────────
-function renderProcurement() {
-  var c = document.getElementById('proc-list'); if (!c) return;
-  c.innerHTML = '';
-  [{l:'Critical - Order First',p:'h'},{l:'Standard - By 19 June',p:'m'},{l:'Lower Priority',p:'l'}].forEach(function(g) {
-    var items = PROCUREMENT.filter(function(x) { return x.pri === g.p; });
-    if (!items.length) return;
-    var sec = document.createElement('div'); sec.style.marginBottom = '18px';
-    var title = document.createElement('div');
-    title.style.cssText = 'font-family:Bebas Neue,sans-serif;font-size:15px;letter-spacing:2px;color:var(--text2);margin-bottom:8px;';
-    title.textContent = g.l; sec.appendChild(title);
-    var tbl = document.createElement('table'); tbl.className = 'ptbl';
-    var thead = document.createElement('thead');
-    thead.innerHTML = '<tr><th style="width:28px">&#10003;</th><th>Item</th><th>By</th><th>Notes</th></tr>';
-    tbl.appendChild(thead);
-    var tbody = document.createElement('tbody');
-    items.forEach(function(item) {
-      var key = 'proc:' + item.item.replace(/\s+/g, '-');
-      var chk = DB.procDone[key] || false;
-      var tr = document.createElement('tr'); if (chk) tr.style.opacity = '0.45';
-      var td1 = document.createElement('td');
-      var box = mk('div', 'pchk' + (chk ? ' on' : ''), chk ? '\u2713' : '');
-      box.addEventListener('click', function() { toggleProc(key, box); });
-      td1.appendChild(box); tr.appendChild(td1);
-      var td2 = document.createElement('td'); td2.textContent = item.item;
-      var tag = mk('span', 'pritag ' + item.pri, item.proj); tag.style.display = 'block'; tag.style.marginTop = '2px';
-      td2.appendChild(tag); tr.appendChild(td2);
-      var td3 = document.createElement('td'); td3.style.cssText = 'font-family:JetBrains Mono,monospace;font-size:9px;color:var(--text3)'; td3.textContent = item.by; tr.appendChild(td3);
-      var td4 = document.createElement('td'); td4.style.cssText = 'font-size:10px;color:var(--text3)'; td4.textContent = item.note; tr.appendChild(td4);
-      tbody.appendChild(tr);
-    });
-    tbl.appendChild(tbody); sec.appendChild(tbl); c.appendChild(sec);
-  });
-}
+
 
 // ── DEPS ──────────────────────────────────────────
 function renderDeps() {
@@ -1808,28 +1781,174 @@ function closeZone() {
   SM.activeZone = null;
 }
 
-// ── FLOATING NAV ──────────────────────────────────
+// ── FLOATING NAV (radial menu, draggable) ────────────
 var navOpen = false;
+var navTabs = [
+  {id:'overview', icon:'&#127968;', label:'HOME'},
+  {id:'projects', icon:'&#128203;', label:'TASKS'},
+  {id:'gantt', icon:'&#128197;', label:'GANTT'},
+  {id:'rules', icon:'&#128274;', label:'RULES'},
+  {id:'storage', icon:'&#9729;&#65039;', label:'SYNC'},
+  {id:'sitemap', icon:'&#128506;&#65039;', label:'MAP'}
+];
+
+var dotPos = {x: null, y: null}; // null = use default CSS bottom/right
+var dotDrag = {active: false, moved: false, startX: 0, startY: 0, origX: 0, origY: 0};
+
+function initNavDot() {
+  var dot = document.getElementById('nav-dot');
+  if (!dot) return;
+
+  // Restore saved position
+  try {
+    var saved = JSON.parse(localStorage.getItem('navdot-pos') || 'null');
+    if (saved && saved.x !== undefined) { dotPos = saved; applyDotPos(); }
+    else { setDefaultDotPos(); }
+  } catch(e) { setDefaultDotPos(); }
+
+  dot.addEventListener('pointerdown', function(e) {
+    e.preventDefault();
+    dotDrag.active = true;
+    dotDrag.moved = false;
+    dotDrag.startX = e.clientX; dotDrag.startY = e.clientY;
+    var rect = dot.getBoundingClientRect();
+    dotDrag.origX = rect.left; dotDrag.origY = rect.top;
+    dot.classList.add('dragging');
+    dot.setPointerCapture(e.pointerId);
+  });
+
+  dot.addEventListener('pointermove', function(e) {
+    if (!dotDrag.active) return;
+    var dx = e.clientX - dotDrag.startX;
+    var dy = e.clientY - dotDrag.startY;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dotDrag.moved = true;
+    if (dotDrag.moved) {
+      var newX = dotDrag.origX + dx;
+      var newY = dotDrag.origY + dy;
+      var size = dot.classList.contains('idle') ? 14 : 50;
+      newX = Math.max(4, Math.min(window.innerWidth - size - 4, newX));
+      newY = Math.max(4, Math.min(window.innerHeight - size - 4, newY));
+      dotPos = {x: newX, y: newY};
+      applyDotPos();
+      if (navOpen) positionRadialItems();
+    }
+  });
+
+  dot.addEventListener('pointerup', function(e) {
+    dotDrag.active = false;
+    dot.classList.remove('dragging');
+    try { dot.releasePointerCapture(e.pointerId); } catch(err) {}
+    if (dotDrag.moved) {
+      try { localStorage.setItem('navdot-pos', JSON.stringify(dotPos)); } catch(err) {}
+      dotDrag.moved = false;
+    } else {
+      toggleNav();
+    }
+  });
+
+  buildRadialMenu();
+}
+
+function setDefaultDotPos() {
+  dotPos = {x: window.innerWidth - 68, y: window.innerHeight - 86};
+  applyDotPos();
+}
+
+function applyDotPos() {
+  var dot = document.getElementById('nav-dot');
+  if (!dot || dotPos.x === null) return;
+  dot.style.left = dotPos.x + 'px';
+  dot.style.top = dotPos.y + 'px';
+  dot.style.right = 'auto';
+  dot.style.bottom = 'auto';
+}
+
+function buildRadialMenu() {
+  var container = document.getElementById('radial-menu');
+  if (!container) return;
+  container.innerHTML = '';
+  navTabs.forEach(function(tab, i) {
+    var item = document.createElement('div');
+    item.className = 'radial-item';
+    item.id = 'radial-' + tab.id;
+    item.innerHTML = '<div class="radial-icon">' + tab.icon + '</div><div class="radial-label">' + tab.label + '</div>';
+    item.addEventListener('click', function(e) {
+      e.stopPropagation();
+      showTab(tab.id);
+    });
+    container.appendChild(item);
+  });
+}
+
+function positionRadialItems() {
+  var dot = document.getElementById('nav-dot');
+  if (!dot) return;
+  var rect = dot.getBoundingClientRect();
+  var cx = rect.left + rect.width / 2;
+  var cy = rect.top + rect.height / 2;
+  var radius = 95;
+  var count = navTabs.length;
+
+  // Determine arc based on dot position on screen to keep menu visible
+  var nearRight = cx > window.innerWidth - 120;
+  var nearLeft = cx < 120;
+  var nearBottom = cy > window.innerHeight - 140;
+  var nearTop = cy < 140;
+
+  var startAngle, endAngle;
+  if (nearBottom && nearRight) { startAngle = 180; endAngle = 270; }
+  else if (nearBottom && nearLeft) { startAngle = 270; endAngle = 360; }
+  else if (nearTop && nearRight) { startAngle = 90; endAngle = 180; }
+  else if (nearTop && nearLeft) { startAngle = 0; endAngle = 90; }
+  else if (nearBottom) { startAngle = 160; endAngle = 380; }
+  else if (nearTop) { startAngle = -20; endAngle = 200; }
+  else if (nearRight) { startAngle = 100; endAngle = 260; }
+  else { startAngle = -80; endAngle = 80; }
+
+  navTabs.forEach(function(tab, i) {
+    var angle = startAngle + (endAngle - startAngle) * (i / (count - 1));
+    var rad = angle * Math.PI / 180;
+    var x = cx + radius * Math.cos(rad) - 23;
+    var y = cy + radius * Math.sin(rad) - 23;
+    x = Math.max(4, Math.min(window.innerWidth - 50, x));
+    y = Math.max(4, Math.min(window.innerHeight - 50, y));
+    var item = document.getElementById('radial-' + tab.id);
+    if (item) {
+      item.style.left = x + 'px';
+      item.style.top = y + 'px';
+    }
+  });
+}
+
 function toggleNav() {
   if (navOpen) closeNav(); else openNav();
 }
 function openNav() {
   navOpen = true;
-  var nav = document.getElementById('main-nav');
   var dot = document.getElementById('nav-dot');
   var scrim = document.getElementById('nav-scrim');
-  if (nav) nav.classList.add('show');
   if (dot) { dot.classList.remove('idle'); dot.classList.add('open'); }
   if (scrim) scrim.classList.add('show');
+  positionRadialItems();
+  navTabs.forEach(function(tab, i) {
+    var item = document.getElementById('radial-' + tab.id);
+    if (item) {
+      setTimeout(function() { item.classList.add('show'); }, i * 30);
+      var panel = document.getElementById('tab-' + tab.id);
+      item.classList.toggle('on', panel && panel.classList.contains('on'));
+    }
+  });
 }
 function closeNav() {
   navOpen = false;
-  var nav = document.getElementById('main-nav');
   var dot = document.getElementById('nav-dot');
   var scrim = document.getElementById('nav-scrim');
-  if (nav) nav.classList.remove('show');
   if (dot) { dot.classList.add('idle'); dot.classList.remove('open'); }
   if (scrim) scrim.classList.remove('show');
+  navTabs.forEach(function(tab) {
+    var item = document.getElementById('radial-' + tab.id);
+    if (item) item.classList.remove('show');
+  });
 }
 
 // ── TAB NAV ───────────────────────────────────────
@@ -1843,6 +1962,18 @@ function showTab(name) {
   window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
+window.addEventListener('resize', function() {
+  if (dotPos.x !== null) {
+    var dot = document.getElementById('nav-dot');
+    if (dot) {
+      var size = dot.classList.contains('idle') ? 14 : 50;
+      dotPos.x = Math.max(4, Math.min(window.innerWidth - size - 4, dotPos.x));
+      dotPos.y = Math.max(4, Math.min(window.innerHeight - size - 4, dotPos.y));
+      applyDotPos();
+    }
+  }
+});
+
 // ── RENDER ALL ────────────────────────────────────
 function renderAll() {
   renderProjects();
@@ -1854,6 +1985,7 @@ function renderAll() {
 // ── START ─────────────────────────────────────────
 init();
 SM.init();
+initNavDot();
 </script>
 </body>
 </html>
