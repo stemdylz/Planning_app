@@ -566,6 +566,37 @@ var Store = {
     return fetch(GS_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'ping'}), headers:{'Content-Type':'application/json'}})
       .then(function() { self.gsOk = true; return true; })
       .catch(function() { return false; });
+  },
+  // JSONP GET — bypasses CORS, works for reading from Apps Script
+  loadFromSheets: function() {
+    return new Promise(function(resolve) {
+      var cbName = '_gsLoad_' + Date.now();
+      var done = false;
+      var timeout = setTimeout(function() {
+        if (done) return;
+        done = true;
+        delete window[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+        resolve(null);
+      }, 8000);
+
+      window[cbName] = function(data) {
+        if (done) return;
+        done = true;
+        clearTimeout(timeout);
+        delete window[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+        try {
+          var parsed = typeof data === 'string' ? JSON.parse(data) : data;
+          resolve(parsed);
+        } catch(e) { resolve(null); }
+      };
+
+      var script = document.createElement('script');
+      script.src = GS_URL + '?action=load&callback=' + cbName;
+      script.onerror = function() { if (!done) { done = true; clearTimeout(timeout); resolve(null); } };
+      document.head.appendChild(script);
+    });
   }
 };
 
@@ -697,7 +728,7 @@ var DEPS = [
 
 // ── STATE ──────────────────────────────────────────
 var DB = {};
-var APP_VER = 'v12';
+var APP_VER = 'v17';
 
 function uid() { return Math.random().toString(36).slice(2, 8); }
 function save() { Store.save(DB); }
@@ -728,31 +759,45 @@ function ppct(p) {
 function init() {
   // Clear ALL previous version keys to ensure clean slate
   var oldKeys = ['reno-hq-v3','reno-hq','reno-ver'];
-  var knownOldVers = ['v1','v2','v3','v4','v5','v6','v7','v8','v9','v10','v11'];
   var curVer = localStorage.getItem('reno-ver');
   if (curVer !== APP_VER) {
     oldKeys.forEach(function(k) { try { localStorage.removeItem(k); } catch(e) {} });
     try { localStorage.setItem('reno-ver', APP_VER); } catch(e) {}
   }
-  var saved = Store.load();
-  if (saved && saved.projects && saved.projects.length > 0) {
-    DB = saved;
+
+  // Step 1 — load local data immediately for instant render
+  var local = Store.load();
+  if (local && local.projects && local.projects.length > 0) {
+    DB = local;
   } else {
     DB = JSON.parse(JSON.stringify(DFLT));
-    save();
   }
   renderAll();
   document.getElementById('gs-url').value = GS_URL;
+
+  // Step 2 — connect to Sheets, then pull the latest data (source of truth)
   Store.connect().then(function(ok) {
     var dot = document.getElementById('gs-dot');
     var badge = document.getElementById('gs-badge');
     if (ok) {
       dot.classList.remove('off');
-      badge.textContent = 'CONNECTED'; badge.className = 'badge ok';
+      badge.textContent = 'SYNCING...'; badge.className = 'badge hi';
+      Store.loadFromSheets().then(function(sheetsData) {
+        if (sheetsData && sheetsData.projects && sheetsData.projects.length > 0) {
+          DB = sheetsData;
+          Store.save(DB); // sync back to localStorage
+          renderAll();
+        } else if (!local || !local.projects || !local.projects.length) {
+          // Nothing in Sheets and nothing local — push defaults up
+          Store.save(DB);
+        }
+        badge.textContent = 'CONNECTED'; badge.className = 'badge ok';
+        updateStats();
+      });
     } else {
       badge.textContent = 'OFFLINE'; badge.className = 'badge warn';
+      updateStats();
     }
-    updateStats();
   });
 }
 
