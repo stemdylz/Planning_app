@@ -737,7 +737,7 @@ var DEPS = [
 
 // ── STATE ──────────────────────────────────────────
 var DB = {};
-var APP_VER = 'v18';
+var APP_VER = 'v19';
 
 function uid() { return Math.random().toString(36).slice(2, 8); }
 function save() { Store.save(DB); }
@@ -1977,8 +1977,10 @@ function toggleNav() {
 }
 function openNav() {
   navOpen = true;
+  var nav = document.getElementById('main-nav');
   var dot = document.getElementById('nav-dot');
   var scrim = document.getElementById('nav-scrim');
+  if (nav) nav.classList.add('show');
   if (dot) { dot.classList.remove('idle'); dot.classList.add('open'); }
   if (scrim) scrim.classList.add('show');
   positionRadialItems();
@@ -1993,8 +1995,10 @@ function openNav() {
 }
 function closeNav() {
   navOpen = false;
+  var nav = document.getElementById('main-nav');
   var dot = document.getElementById('nav-dot');
   var scrim = document.getElementById('nav-scrim');
+  if (nav) nav.classList.remove('show');
   if (dot) { dot.classList.add('idle'); dot.classList.remove('open'); }
   if (scrim) scrim.classList.remove('show');
   navTabs.forEach(function(tab) {
