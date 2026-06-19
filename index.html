@@ -509,7 +509,10 @@ body{padding-top:14px;}
     </div>
 
     <div class="smhint" id="sm-hint">Draw freely with your Apple Pencil</div>
-    <div id="sm-debug" style="background:#2b2722;color:#50c870;font-family:monospace;font-size:9px;padding:6px 8px;border-radius:5px;margin-bottom:6px;white-space:pre-wrap;max-height:80px;overflow-y:auto;display:none;"></div>
+    <div id="sm-debug-wrap" style="display:none;margin-bottom:6px;">
+      <div id="sm-debug" style="background:#2b2722;color:#50c870;font-family:monospace;font-size:9px;padding:6px 8px;border-radius:5px 5px 0 0;white-space:pre-wrap;max-height:80px;overflow-y:auto;"></div>
+      <button onclick="document.getElementById('sm-debug-wrap').style.display='none'" style="width:100%;background:#1a1816;color:#9c9286;border:none;border-radius:0 0 5px 5px;font-family:monospace;font-size:9px;padding:4px;">Hide Debug</button>
+    </div>
     <div class="smsize-row">
       <span>HEIGHT:</span>
       <button class="gbtn" onclick="smSetHeight(0.5)" style="font-size:9px;padding:5px 9px;">S</button>
@@ -551,9 +554,10 @@ var GS_URL = 'https://script.google.com/macros/s/AKfycbxebdXpZ4c-YgNewNxsERCXAPW
 
 // ── STORAGE ──────────────────────────────────────
 function smDebug(msg) {
+  var wrap = document.getElementById('sm-debug-wrap');
   var el = document.getElementById('sm-debug');
   if (!el) return;
-  el.style.display = 'block';
+  if (wrap) wrap.style.display = 'block';
   el.textContent += msg + '\n';
   el.scrollTop = el.scrollHeight;
 }
@@ -736,7 +740,7 @@ var PROCUREMENT = [
 
 // ── STATE ──────────────────────────────────────────
 var DB = {};
-var APP_VER = 'v26';
+var APP_VER = 'v27';
 
 function uid() { return Math.random().toString(36).slice(2, 8); }
 function save() { Store.save(DB); }
@@ -1430,6 +1434,7 @@ var SM = {
     // Pointer events on zone canvas (bottom layer)
     this.cv.addEventListener('pointerdown', function(e) {
       e.preventDefault();
+      smDebug('CV pointerdown: type=' + e.pointerType + ' mode=' + self.sketchMode + ' pe=' + self.sketchCv.style.pointerEvents);
       if (e.pointerType === 'touch' && !e.isPrimary) return;
       if (self.sketchMode === 'zone') {
         self._handleZoneInput(e);
@@ -1440,7 +1445,7 @@ var SM = {
     if (this.sketchCv) {
       this.sketchCv.addEventListener('pointerdown', function(e) {
         e.preventDefault();
-        smDebug('pointerdown: type=' + e.pointerType + ' primary=' + e.isPrimary + ' mode=' + self.sketchMode);
+        smDebug('SKETCH pointerdown: type=' + e.pointerType + ' mode=' + self.sketchMode);
         if (e.pointerType === 'touch' && !e.isPrimary) return;
         if (self.sketchMode === 'sketch') {
           self._startStroke(e);
@@ -1704,11 +1709,13 @@ var SM = {
     var ratio = this.bg ? (this.bg.height / this.bg.width) : this.heightRatio;
     this.W = W; this.H = Math.round(W * ratio);
     this.cv.width = this.W; this.cv.height = this.H;
-    this.cv.style.width = '100%'; this.cv.style.height = 'auto';
+    this.cv.style.width = W + 'px'; this.cv.style.height = this.H + 'px';
     if (this.sketchCv) {
+      var oldStrokes = this.strokes.slice();
       this.sketchCv.width = this.W; this.sketchCv.height = this.H;
-      this.sketchCv.style.width = '100%'; this.sketchCv.style.height = 'auto';
+      this.sketchCv.style.width = W + 'px'; this.sketchCv.style.height = this.H + 'px';
       this.sketchCv.style.position = 'absolute'; this.sketchCv.style.top = '0'; this.sketchCv.style.left = '0';
+      this.strokes = oldStrokes;
     }
     this.redrawAllStrokes();
   },
