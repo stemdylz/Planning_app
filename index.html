@@ -581,6 +581,8 @@ var Store = {
     return new Promise(function(resolve) {
       var cbName = '_gsLoad_' + Date.now();
       var done = false;
+      var script = document.createElement('script');
+
       var timeout = setTimeout(function() {
         if (done) return;
         done = true;
@@ -601,7 +603,6 @@ var Store = {
         } catch(e) { resolve(null); }
       };
 
-      var script = document.createElement('script');
       script.src = GS_URL + '?action=load&callback=' + cbName;
       script.onerror = function() { if (!done) { done = true; clearTimeout(timeout); resolve(null); } };
       document.head.appendChild(script);
@@ -737,7 +738,7 @@ var DEPS = [
 
 // ── STATE ──────────────────────────────────────────
 var DB = {};
-var APP_VER = 'v19';
+var APP_VER = 'v21';
 
 function uid() { return Math.random().toString(36).slice(2, 8); }
 function save() { Store.save(DB); }
@@ -785,12 +786,14 @@ function init() {
   document.getElementById('gs-url').value = GS_URL;
 
   // Step 2 — connect to Sheets, then pull the latest data (source of truth)
+  var gsDot = document.getElementById('gs-dot');
+  var gsBadge = document.getElementById('gs-badge');
+  if (gsBadge) { gsBadge.textContent = 'CONNECTING...'; gsBadge.className = 'badge'; }
+
   Store.connect().then(function(ok) {
-    var dot = document.getElementById('gs-dot');
-    var badge = document.getElementById('gs-badge');
     if (ok) {
-      dot.classList.remove('off');
-      badge.textContent = 'SYNCING...'; badge.className = 'badge hi';
+      if (gsDot) gsDot.classList.remove('off');
+      if (gsBadge) { gsBadge.textContent = 'SYNCING...'; gsBadge.className = 'badge hi'; }
       Store.loadFromSheets().then(function(sheetsData) {
         if (sheetsData && sheetsData.projects && sheetsData.projects.length > 0) {
           DB = sheetsData;
@@ -800,13 +803,19 @@ function init() {
           // Nothing in Sheets and nothing local — push defaults up
           Store.save(DB);
         }
-        badge.textContent = 'CONNECTED'; badge.className = 'badge ok';
+        if (gsBadge) { gsBadge.textContent = 'CONNECTED'; gsBadge.className = 'badge ok'; }
+        updateStats();
+      }).catch(function() {
+        if (gsBadge) { gsBadge.textContent = 'CONNECTED (load failed)'; gsBadge.className = 'badge warn'; }
         updateStats();
       });
     } else {
-      badge.textContent = 'OFFLINE'; badge.className = 'badge warn';
+      if (gsBadge) { gsBadge.textContent = 'OFFLINE'; gsBadge.className = 'badge warn'; }
       updateStats();
     }
+  }).catch(function() {
+    if (gsBadge) { gsBadge.textContent = 'ERROR'; gsBadge.className = 'badge warn'; }
+    updateStats();
   });
 }
 
@@ -928,6 +937,137 @@ function ap(parent) {
 }
 
 // ── RENDER ────────────────────────────────────────
+// ── DATE HELPERS ─────────────────────────────────────
+function parseDays(dayStr) {
+  if (!dayStr || dayStr === 'TBD') return {s: 0, e: 0};
+  var dm = dayStr.match(/Day[s]?\s*(\d+)[\s\-]+(\d+)?/i);
+  if (!dm) dm = dayStr.match(/Day[s]?\s*(\d+)/i);
+  if (dm) return {s: parseInt(dm[1]), e: dm[2] ? parseInt(dm[2]) : parseInt(dm[1])};
+  return {s: 0, e: 0};
+}
+
+function formatDayLabel(s, e) {
+  if (!s) return 'Day TBD';
+  if (e && e !== s) return 'Days ' + s + '-' + e;
+  return 'Day ' + s;
+}
+
+function getPhDates(ph) {
+  var s = 999, e = 0, found = false;
+  ph.tasks.forEach(function(t) {
+    var d = parseDays(t.day);
+    if (d.s) { found = true; s = Math.min(s, d.s); e = Math.max(e, d.e); }
+  });
+  return found ? {s: s, e: e} : null;
+}
+
+function getSecDates(p) {
+  var s = 999, e = 0, found = false;
+  p.phases.forEach(function(ph) {
+    var d = getPhDates(ph);
+    if (d) { found = true; s = Math.min(s, d.s); e = Math.max(e, d.e); }
+  });
+  return found ? {s: s, e: e} : null;
+}
+
+function patchDateLabels() {
+  DB.projects.forEach(function(p) {
+    var secD = getSecDates(p);
+    document.querySelectorAll('[data-secdates="' + p.id + '"]').forEach(function(el) {
+      el.textContent = secD ? 'Day ' + secD.s + (secD.e !== secD.s ? ' - ' + secD.e : '') : (p.days || 'TBD');
+    });
+  });
+}
+
+// ── DAY PICKER MODAL ──────────────────────────────────
+var _dayPickerTid = null;
+
+function openDayPicker(tid, el, span) {
+  _dayPickerTid = tid;
+  var t = allTasks().find(function(x) { return x.id === tid; });
+  var d = parseDays(t ? t.day : '');
+  var startDay = d.s || 1;
+  var endDay = d.e || startDay;
+
+  var modal = mk('div', 'daymodal');
+  modal.id = 'day-modal';
+  var bg = mk('div', 'daymodal-bg');
+  bg.addEventListener('click', function() { closeDayPicker(); });
+  var box = mk('div', 'daymodal-box');
+  var title = mk('div', 'daymodal-title', 'Set Task Days');
+  var rangeDisp = mk('div', 'day-range-display');
+
+  function updateRangeDisp(s, e) {
+    rangeDisp.innerHTML = '';
+    var l1 = mk('div'); l1.innerHTML = 'Day <strong>' + s + '</strong>' + (e !== s ? ' to Day <strong>' + e + '</strong>' : '');
+    var l2 = mk('div'); l2.style.cssText = 'font-size:9px;color:var(--text3);margin-top:2px;';
+    l2.textContent = 'Jun ' + (25 + s) + (e !== s ? ' - Jun ' + (25 + e) : '') + ' 2026';
+    ap(rangeDisp, l1, l2);
+  }
+  updateRangeDisp(startDay, endDay);
+
+  var startRow = mk('div', 'dayslider-row');
+  var startLbl = mk('div');
+  var startLblTxt = mk('div', 'dayslider-lbl', 'Start Day');
+  var startVal = mk('div', 'dayslider-val', 'Day ' + startDay);
+  var startSlider = document.createElement('input');
+  startSlider.type = 'range'; startSlider.className = 'dayslider';
+  startSlider.min = 1; startSlider.max = 12; startSlider.value = startDay;
+
+  var endRow = mk('div', 'dayslider-row');
+  var endLbl = mk('div');
+  var endLblTxt = mk('div', 'dayslider-lbl', 'End Day');
+  var endVal = mk('div', 'dayslider-val', 'Day ' + endDay);
+  var endSlider = document.createElement('input');
+  endSlider.type = 'range'; endSlider.className = 'dayslider';
+  endSlider.min = 1; endSlider.max = 12; endSlider.value = endDay;
+
+  startSlider.addEventListener('input', function() {
+    var sv = parseInt(startSlider.value);
+    var ev = parseInt(endSlider.value);
+    if (sv > ev) { endSlider.value = sv; endVal.textContent = 'Day ' + sv; ev = sv; }
+    startVal.textContent = 'Day ' + sv;
+    updateRangeDisp(sv, Math.max(sv, ev));
+  });
+  endSlider.addEventListener('input', function() {
+    var sv = parseInt(startSlider.value);
+    var ev = parseInt(endSlider.value);
+    if (ev < sv) { startSlider.value = ev; startVal.textContent = 'Day ' + ev; sv = ev; }
+    endVal.textContent = 'Day ' + ev;
+    updateRangeDisp(Math.min(sv, ev), ev);
+  });
+
+  ap(startLbl, startLblTxt, startVal);
+  ap(startRow, startLbl, startSlider);
+  ap(endLbl, endLblTxt, endVal);
+  ap(endRow, endLbl, endSlider);
+
+  var btnRow = mk('div'); btnRow.style.cssText = 'display:flex;gap:8px;';
+  var saveBtn = mk('button', 'btn', 'Save');
+  saveBtn.addEventListener('click', function() {
+    var sv = parseInt(startSlider.value);
+    var ev = parseInt(endSlider.value);
+    var dayStr = sv === ev ? 'Day ' + sv : 'Days ' + sv + '-' + ev;
+    var task = allTasks().find(function(x) { return x.id === _dayPickerTid; });
+    if (task) { task.day = dayStr; save(); }
+    if (span) span.innerHTML = formatDayLabel(sv, ev);
+    patchDateLabels();
+    renderGantt();
+    closeDayPicker();
+  });
+  var cancelBtn = mk('button', 'gbtn', 'Cancel');
+  cancelBtn.addEventListener('click', function() { closeDayPicker(); });
+  ap(btnRow, saveBtn, cancelBtn);
+  ap(box, title, rangeDisp, startRow, endRow, btnRow);
+  ap(modal, bg, box);
+  document.body.appendChild(modal);
+}
+
+function closeDayPicker() {
+  var modal = document.getElementById('day-modal');
+  if (modal && modal.parentNode) modal.parentNode.removeChild(modal);
+}
+
 function renderProjectCard(p, container) {
   var pct = ppct(p), open = isOpen('proj', p.id);
   var card = mk('div', 'pcard' + (open ? ' open' : ''));
@@ -1854,52 +1994,80 @@ function initNavDot() {
   var dot = document.getElementById('nav-dot');
   if (!dot) return;
 
-  // Restore saved position
+  // Restore saved position, with bounds-checking against current viewport
   try {
     var saved = JSON.parse(localStorage.getItem('navdot-pos') || 'null');
-    if (saved && saved.x !== undefined) { dotPos = saved; applyDotPos(); }
-    else { setDefaultDotPos(); }
+    if (saved && saved.x !== undefined && saved.x !== null &&
+        saved.x >= 0 && saved.x < window.innerWidth &&
+        saved.y >= 0 && saved.y < window.innerHeight) {
+      dotPos = saved; applyDotPos();
+    } else { setDefaultDotPos(); }
   } catch(e) { setDefaultDotPos(); }
 
-  dot.addEventListener('pointerdown', function(e) {
+  function getXY(e) {
+    if (e.touches && e.touches.length) return {x: e.touches[0].clientX, y: e.touches[0].clientY};
+    if (e.changedTouches && e.changedTouches.length) return {x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY};
+    return {x: e.clientX, y: e.clientY};
+  }
+
+  function dragStart(e) {
     e.preventDefault();
+    var p = getXY(e);
     dotDrag.active = true;
     dotDrag.moved = false;
-    dotDrag.startX = e.clientX; dotDrag.startY = e.clientY;
+    dotDrag.startX = p.x; dotDrag.startY = p.y;
     var rect = dot.getBoundingClientRect();
     dotDrag.origX = rect.left; dotDrag.origY = rect.top;
     dot.classList.add('dragging');
-    dot.setPointerCapture(e.pointerId);
-  });
+    if (e.pointerId !== undefined) {
+      try { dot.setPointerCapture(e.pointerId); } catch(err) {}
+    }
+  }
 
-  dot.addEventListener('pointermove', function(e) {
+  function dragMove(e) {
     if (!dotDrag.active) return;
-    var dx = e.clientX - dotDrag.startX;
-    var dy = e.clientY - dotDrag.startY;
+    e.preventDefault();
+    var p = getXY(e);
+    var dx = p.x - dotDrag.startX;
+    var dy = p.y - dotDrag.startY;
     if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dotDrag.moved = true;
     if (dotDrag.moved) {
       var newX = dotDrag.origX + dx;
       var newY = dotDrag.origY + dy;
-      var size = dot.classList.contains('idle') ? 14 : 50;
+      var size = dot.classList.contains('idle') ? 20 : 50;
       newX = Math.max(4, Math.min(window.innerWidth - size - 4, newX));
       newY = Math.max(4, Math.min(window.innerHeight - size - 4, newY));
       dotPos = {x: newX, y: newY};
       applyDotPos();
       if (navOpen) positionRadialItems();
     }
-  });
+  }
 
-  dot.addEventListener('pointerup', function(e) {
+  function dragEnd(e) {
+    if (!dotDrag.active) return;
     dotDrag.active = false;
     dot.classList.remove('dragging');
-    try { dot.releasePointerCapture(e.pointerId); } catch(err) {}
+    if (e.pointerId !== undefined) {
+      try { dot.releasePointerCapture(e.pointerId); } catch(err) {}
+    }
     if (dotDrag.moved) {
       try { localStorage.setItem('navdot-pos', JSON.stringify(dotPos)); } catch(err) {}
       dotDrag.moved = false;
     } else {
       toggleNav();
     }
-  });
+  }
+
+  // Pointer events (covers mouse + most modern touch)
+  dot.addEventListener('pointerdown', dragStart);
+  dot.addEventListener('pointermove', dragMove);
+  dot.addEventListener('pointerup', dragEnd);
+  dot.addEventListener('pointercancel', dragEnd);
+
+  // Touch event fallback (in case pointer events misbehave on this WebKit version)
+  dot.addEventListener('touchstart', dragStart, {passive: false});
+  dot.addEventListener('touchmove', dragMove, {passive: false});
+  dot.addEventListener('touchend', dragEnd, {passive: false});
 
   buildRadialMenu();
 }
