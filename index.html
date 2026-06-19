@@ -280,7 +280,6 @@ body{padding-top:14px;}
   <button class="ntab on" onclick="showTab('overview')">Overview</button>
   <button class="ntab" onclick="showTab('projects')">Projects</button>
   <button class="ntab" onclick="showTab('gantt')">Gantt</button>
-  <button class="ntab" onclick="showTab('rules')">Rules</button>
   <button class="ntab" onclick="showTab('storage')">Storage</button>
   <button class="ntab" onclick="showTab('sitemap')">Site Map</button>
 </nav>
@@ -396,14 +395,6 @@ body{padding-top:14px;}
     </tbody>
     <tbody id="gantt-body"></tbody>
   </table></div>
-</div>
-
-<!-- RULES -->
-<div id="tab-rules" class="panel">
-  <div class="ptitle">Rules &amp; Dependencies</div>
-  <div class="pmeta">SEQUENCE LOGIC THAT MUST BE RESPECTED</div>
-  <button class="showmenu-btn" onclick="toggleNav()">&#9776; Show Menu</button>
-  <div id="dep-list"></div>
 </div>
 
 <!-- STORAGE -->
@@ -562,13 +553,21 @@ var Store = {
   gsOk: false,
   save: function(d) {
     try { localStorage.setItem('reno-hq', JSON.stringify(d)); } catch(e) {}
-    if (this.gsOk) this._push(d);
+    // Always attempt the Sheets push — no-cors fetches don't reliably
+    // report success/failure, so gating on a one-time connect flag
+    // caused saves to silently stop reaching Sheets after the first load.
+    this._push(d);
   },
   load: function() {
     try { var r = localStorage.getItem('reno-hq'); return r ? JSON.parse(r) : null; } catch(e) { return null; }
   },
   _push: function(d) {
-    fetch(GS_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'save',data:d}), headers:{'Content-Type':'application/json'}}).catch(function(){});
+    fetch(GS_URL, {method:'POST', mode:'no-cors', body:JSON.stringify({action:'save',data:d}), headers:{'Content-Type':'application/json'}})
+      .then(function() {
+        Store.gsOk = true;
+        try { localStorage.setItem('reno-last-sync', new Date().toISOString()); } catch(e) {}
+      })
+      .catch(function() { /* network fully offline — localStorage still has the data */ });
   },
   connect: function() {
     var self = this;
@@ -726,19 +725,9 @@ var PROCUREMENT = [
   {item:'Flooring - All Sections',proj:'All',pri:'l',by:'22 Jun',note:'Allow acclimatisation time.'}
 ];
 
-var DEPS = [
-  {i:'&#128274;',r:'Roof must be weathertight before any interior work',n:'Complete and water-test roof before starting interior ceiling or wall work.'},
-  {i:'&#127750;',r:'All exterior work requires dry weather + 24h dry forecast',n:'Check forecast from 23 June. Have interior fallback plan ready.'},
-  {i:'&#127912;',r:'All surfaces fully prepped before painting starts',n:'No surface gets painted until all boarding, jointing and sanding is complete.'},
-  {i:'&#128296;',r:'All carpentry batched in one run',n:'Order and build all carpentry across all sections together to save cost.'},
-  {i:'&#9889;',r:'Verify electrical compliance before any electrical work',n:'Confirm local requirements for downlights and power points.'},
-  {i:'&#128692;',r:'Roof safety setup before any roof access',n:'Harness, secured ladder, rope access required. Non-negotiable.'},
-  {i:'&#128203;',r:'Materials procurement complete by 19 June',n:'7-day lead time required. Order everything this week.'}
-];
-
 // ── STATE ──────────────────────────────────────────
 var DB = {};
-var APP_VER = 'v21';
+var APP_VER = 'v23';
 
 function uid() { return Math.random().toString(36).slice(2, 8); }
 function save() { Store.save(DB); }
@@ -1221,7 +1210,9 @@ function updateStats() {
   var ss = document.getElementById('storage-stats');
   if (ss) {
     var r = localStorage.getItem('reno-hq') || '';
-    ss.innerHTML = 'Sections: ' + DB.projects.length + '<br>Tasks: ' + tasks.length + '<br>Actions: ' + actions.length + '<br>Size: ' + (new Blob([r]).size / 1024).toFixed(1) + ' KB<br>Sheets: ' + (Store.gsOk ? 'Connected' : 'Not connected');
+    var lastSync = localStorage.getItem('reno-last-sync');
+    var syncLine = lastSync ? new Date(lastSync).toLocaleTimeString() : 'never';
+    ss.innerHTML = 'Sections: ' + DB.projects.length + '<br>Tasks: ' + tasks.length + '<br>Actions: ' + actions.length + '<br>Size: ' + (new Blob([r]).size / 1024).toFixed(1) + ' KB<br>Sheets: ' + (Store.gsOk ? 'Connected' : 'Not connected') + '<br>Last synced: ' + syncLine;
   }
 }
 
@@ -1377,20 +1368,6 @@ function renderGantt() {
 
 // ── PROCUREMENT ───────────────────────────────────
 
-
-// ── DEPS ──────────────────────────────────────────
-function renderDeps() {
-  var el = document.getElementById('dep-list'); if (!el) return;
-  el.innerHTML = '';
-  DEPS.forEach(function(d) {
-    var card = mk('div', 'dcard');
-    var icon = mk('div', 'dicon'); icon.innerHTML = d.i;
-    var body = mk('div');
-    var rule = mk('div', 'drule', d.r);
-    var note = mk('div', 'dnote', d.n);
-    ap(body, rule, note); ap(card, icon, body); el.appendChild(card);
-  });
-}
 
 // ── STORAGE ACTIONS ───────────────────────────────
 function exportJSON() {
@@ -1982,7 +1959,6 @@ var navTabs = [
   {id:'overview', icon:'&#127968;', label:'HOME'},
   {id:'projects', icon:'&#128203;', label:'TASKS'},
   {id:'gantt', icon:'&#128197;', label:'GANTT'},
-  {id:'rules', icon:'&#128274;', label:'RULES'},
   {id:'storage', icon:'&#9729;&#65039;', label:'SYNC'},
   {id:'sitemap', icon:'&#128506;&#65039;', label:'MAP'}
 ];
@@ -2202,7 +2178,6 @@ window.addEventListener('resize', function() {
 function renderAll() {
   renderProjects();
   renderGantt();
-  renderDeps();
   updateStats();
 }
 
