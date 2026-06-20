@@ -740,7 +740,7 @@ var PROCUREMENT = [
 
 // ── STATE ──────────────────────────────────────────
 var DB = {};
-var APP_VER = 'v29';
+var APP_VER = 'v30';
 
 function uid() { return Math.random().toString(36).slice(2, 8); }
 function save() { Store.save(DB); }
@@ -769,14 +769,6 @@ function ppct(p) {
 
 // ── INIT ──────────────────────────────────────────
 function init() {
-  // Clear ALL previous version keys to ensure clean slate
-  var oldKeys = ['reno-hq-v3','reno-hq','reno-ver'];
-  var curVer = localStorage.getItem('reno-ver');
-  if (curVer !== APP_VER) {
-    oldKeys.forEach(function(k) { try { localStorage.removeItem(k); } catch(e) {} });
-    try { localStorage.setItem('reno-ver', APP_VER); } catch(e) {}
-  }
-
   // Step 1 — load local data immediately for instant render
   var local = Store.load();
   if (local && local.projects && local.projects.length > 0) {
