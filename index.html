@@ -156,8 +156,10 @@ body{padding-top:14px;}
 .dayslider{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:var(--border);outline:none;}
 .dayslider::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.2);}
 .dayslider-val{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--accent);text-align:center;margin-top:2px;}
-.day-range-display{background:var(--s2);border-radius:8px;padding:12px;text-align:center;margin-bottom:14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);}
+.day-range-display{background:var(--s2);border-radius:8px;padding:12px;text-align:center;margin-bottom:14px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text2);}
 .day-range-display strong{color:var(--accent);font-size:14px;}
+.dateinput{width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--s2);font-family:'Syne',sans-serif;font-size:14px;color:var(--text);outline:none;}
+.dateinput:focus{border-color:var(--accent);}
 .phdates{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);margin-left:4px;}
 .secdates{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);}
 .tbody{display:none;margin-top:5px;}
@@ -372,26 +374,18 @@ body{padding-top:14px;}
 <!-- GANTT -->
 <div id="tab-gantt" class="panel">
   <div class="ptitle">Gantt Schedule</div>
-  <div class="pmeta">26 JUN – 7 JUL 2026</div>
+  <div class="pmeta" id="gantt-window-label">Set task dates to populate the schedule</div>
   <button class="showmenu-btn" onclick="toggleNav()">&#9776; Show Menu</button>
-  <div class="wcard"><strong>&#127750; Weather:</strong> Roof exterior must run on confirmed dry days. Check forecast from 23 June. Shift to interior work if rain hits early.</div>
+  <div class="wcard"><strong>&#127750; Weather:</strong> Roof exterior must run on confirmed dry days. Shift to interior work if rain hits early.</div>
   <div class="gscroll"><table class="gtbl" id="gantt-tbl">
-    <thead><tr>
+    <thead><tr id="gantt-head-row">
       <th class="lth">TASK</th>
-      <th><span class="dn">26</span>FRI</th><th class="we"><span class="dn">27</span>SAT</th><th class="we"><span class="dn">28</span>SUN</th>
-      <th><span class="dn">29</span>MON</th><th><span class="dn">30</span>TUE</th><th><span class="dn">1</span>WED</th><th><span class="dn">2</span>THU</th>
-      <th class="we"><span class="dn">3</span>FRI</th><th class="we"><span class="dn">4</span>SAT</th>
-      <th><span class="dn">5</span>SUN</th><th><span class="dn">6</span>MON</th><th><span class="dn">7</span>TUE</th>
     </tr></thead>
     <tbody>
       <tr class="gweather-row" id="gantt-weather-row">
         <td class="ltd" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);">
           &#9925; WEATHER<br><span style="font-size:8px;opacity:.7;">Parow, Cape Town</span>
         </td>
-        <td class="gwx" data-wx-day="0"></td><td class="gwx" data-wx-day="1"></td><td class="gwx" data-wx-day="2"></td>
-        <td class="gwx" data-wx-day="3"></td><td class="gwx" data-wx-day="4"></td><td class="gwx" data-wx-day="5"></td>
-        <td class="gwx" data-wx-day="6"></td><td class="gwx" data-wx-day="7"></td><td class="gwx" data-wx-day="8"></td>
-        <td class="gwx" data-wx-day="9"></td><td class="gwx" data-wx-day="10"></td><td class="gwx" data-wx-day="11"></td>
       </tr>
     </tbody>
     <tbody id="gantt-body"></tbody>
@@ -746,7 +740,7 @@ var PROCUREMENT = [
 
 // ── STATE ──────────────────────────────────────────
 var DB = {};
-var APP_VER = 'v33';
+var APP_VER = 'v34';
 
 function uid() { return Math.random().toString(36).slice(2, 8); }
 function save() { Store.save(DB); }
@@ -773,6 +767,29 @@ function ppct(p) {
   return tot === 0 ? 0 : Math.round((done / tot) * 100);
 }
 
+// Migrate any task still using the legacy "Day N" string format
+// to real start/end ISO date fields. Mutates DB in place, returns
+// true if anything was changed (so caller knows to persist it).
+function migrateLegacyDates() {
+  var changed = false;
+  DB.projects.forEach(function(p) {
+    p.phases.forEach(function(ph) {
+      ph.tasks.forEach(function(t) {
+        if (!t.start && t.day && t.day !== 'TBD') {
+          var d = getTaskDates(t);
+          if (d) {
+            t.start = d.start;
+            t.end = d.end;
+            delete t.day;
+            changed = true;
+          }
+        }
+      });
+    });
+  });
+  return changed;
+}
+
 // ── INIT ──────────────────────────────────────────
 function init() {
   // Step 1 — load local data immediately for instant render
@@ -782,6 +799,7 @@ function init() {
   } else {
     DB = JSON.parse(JSON.stringify(DFLT));
   }
+  if (migrateLegacyDates()) Store.save(DB);
   renderAll();
   document.getElementById('gs-url').value = GS_URL;
 
@@ -797,7 +815,8 @@ function init() {
       Store.loadFromSheets().then(function(sheetsData) {
         if (sheetsData && sheetsData.projects && sheetsData.projects.length > 0) {
           DB = sheetsData;
-          Store.save(DB); // sync back to localStorage
+          if (migrateLegacyDates()) { /* will be saved below regardless */ }
+          Store.save(DB); // sync back to localStorage (and Sheets if migrated)
           renderAll();
         } else if (!local || !local.projects || !local.projects.length) {
           // Nothing in Sheets and nothing local — push defaults up
@@ -938,119 +957,196 @@ function ap(parent) {
 
 // ── RENDER ────────────────────────────────────────
 // ── DATE HELPERS ─────────────────────────────────────
-function parseDays(dayStr) {
-  if (!dayStr || dayStr === 'TBD') return {s: 0, e: 0};
-  var dm = dayStr.match(/Day[s]?\s*(\d+)[\s\-]+(\d+)?/i);
-  if (!dm) dm = dayStr.match(/Day[s]?\s*(\d+)/i);
-  if (dm) return {s: parseInt(dm[1]), e: dm[2] ? parseInt(dm[2]) : parseInt(dm[1])};
-  return {s: 0, e: 0};
+// ── DATE HELPERS ─────────────────────────────────────
+// Tasks store t.start / t.end as ISO date strings (YYYY-MM-DD).
+// Legacy data may still have t.day as "Day N" / "Days N-M" strings —
+// these get converted on first read using PROJECT_ANCHOR as Day 1.
+var PROJECT_ANCHOR = '2026-06-26'; // Day 1 for any legacy "Day N" data
+
+function isoToDate(iso) {
+  if (!iso) return null;
+  var parts = iso.split('-');
+  if (parts.length !== 3) return null;
+  return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
 }
 
-function formatDayLabel(s, e) {
-  if (!s) return 'Day TBD';
-  if (e && e !== s) return 'Days ' + s + '-' + e;
-  return 'Day ' + s;
+function dateToIso(d) {
+  var y = d.getFullYear();
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
+
+function addDays(iso, n) {
+  var d = isoToDate(iso);
+  d.setDate(d.getDate() + n);
+  return dateToIso(d);
+}
+
+function daysBetween(isoA, isoB) {
+  var a = isoToDate(isoA), b = isoToDate(isoB);
+  if (!a || !b) return 0;
+  return Math.round((b - a) / 86400000);
+}
+
+function formatDateShort(iso) {
+  var d = isoToDate(iso);
+  if (!d) return '';
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return months[d.getMonth()] + ' ' + d.getDate();
+}
+
+// Get a task's {start, end} as ISO dates, migrating legacy t.day format if needed
+function getTaskDates(t) {
+  if (t.start && t.end) return {start: t.start, end: t.end};
+  // Legacy migration from "Day N" / "Days N-M" string
+  if (t.day && t.day !== 'TBD') {
+    var dm = t.day.match(/Day[s]?\s*(\d+)[\s\-–]+(\d+)?/i);
+    if (!dm) dm = t.day.match(/Day[s]?\s*(\d+)/i);
+    if (dm) {
+      var s = parseInt(dm[1]) - 1;
+      var e = dm[2] ? parseInt(dm[2]) - 1 : s;
+      return {start: addDays(PROJECT_ANCHOR, s), end: addDays(PROJECT_ANCHOR, e)};
+    }
+  }
+  return null;
+}
+
+function formatDateRangeLabel(start, end) {
+  if (!start) return 'No dates set';
+  if (!end || end === start) return formatDateShort(start);
+  return formatDateShort(start) + ' \u2192 ' + formatDateShort(end);
 }
 
 function getPhDates(ph) {
-  var s = 999, e = 0, found = false;
+  var minStart = null, maxEnd = null;
   ph.tasks.forEach(function(t) {
-    var d = parseDays(t.day);
-    if (d.s) { found = true; s = Math.min(s, d.s); e = Math.max(e, d.e); }
+    var d = getTaskDates(t);
+    if (d) {
+      if (!minStart || d.start < minStart) minStart = d.start;
+      if (!maxEnd || d.end > maxEnd) maxEnd = d.end;
+    }
   });
-  return found ? {s: s, e: e} : null;
+  return minStart ? {start: minStart, end: maxEnd} : null;
 }
 
 function getSecDates(p) {
-  var s = 999, e = 0, found = false;
+  var minStart = null, maxEnd = null;
   p.phases.forEach(function(ph) {
     var d = getPhDates(ph);
-    if (d) { found = true; s = Math.min(s, d.s); e = Math.max(e, d.e); }
+    if (d) {
+      if (!minStart || d.start < minStart) minStart = d.start;
+      if (!maxEnd || d.end > maxEnd) maxEnd = d.end;
+    }
   });
-  return found ? {s: s, e: e} : null;
+  return minStart ? {start: minStart, end: maxEnd} : null;
+}
+
+// Find the overall earliest start / latest end across every task in DB
+function getProjectWindow() {
+  var minStart = null, maxEnd = null;
+  DB.projects.forEach(function(p) {
+    p.phases.forEach(function(ph) {
+      ph.tasks.forEach(function(t) {
+        var d = getTaskDates(t);
+        if (d) {
+          if (!minStart || d.start < minStart) minStart = d.start;
+          if (!maxEnd || d.end > maxEnd) maxEnd = d.end;
+        }
+      });
+    });
+  });
+  if (!minStart) {
+    // No dates anywhere yet — default to a 12-day window from the anchor
+    minStart = PROJECT_ANCHOR;
+    maxEnd = addDays(PROJECT_ANCHOR, 11);
+  }
+  return {start: minStart, end: maxEnd};
 }
 
 function patchDateLabels() {
   DB.projects.forEach(function(p) {
     var secD = getSecDates(p);
     document.querySelectorAll('[data-secdates="' + p.id + '"]').forEach(function(el) {
-      el.textContent = secD ? 'Day ' + secD.s + (secD.e !== secD.s ? ' - ' + secD.e : '') : (p.days || 'TBD');
+      el.textContent = secD ? formatDateRangeLabel(secD.start, secD.end) : (p.days || 'No dates set');
     });
   });
 }
 
-// ── DAY PICKER MODAL ──────────────────────────────────
+// ── DATE PICKER MODAL ─────────────────────────────────
 var _dayPickerTid = null;
 
 function openDayPicker(tid, el, span) {
   _dayPickerTid = tid;
   var t = allTasks().find(function(x) { return x.id === tid; });
-  var d = parseDays(t ? t.day : '');
-  var startDay = d.s || 1;
-  var endDay = d.e || startDay;
+  var existing = getTaskDates(t || {});
+  var startVal = existing ? existing.start : '';
+  var endVal = existing ? existing.end : '';
 
   var modal = mk('div', 'daymodal');
   modal.id = 'day-modal';
   var bg = mk('div', 'daymodal-bg');
   bg.addEventListener('click', function() { closeDayPicker(); });
   var box = mk('div', 'daymodal-box');
-  var title = mk('div', 'daymodal-title', 'Set Task Days');
+  var title = mk('div', 'daymodal-title', 'Set Task Dates');
   var rangeDisp = mk('div', 'day-range-display');
 
   function updateRangeDisp(s, e) {
     rangeDisp.innerHTML = '';
-    var l1 = mk('div'); l1.innerHTML = 'Day <strong>' + s + '</strong>' + (e !== s ? ' to Day <strong>' + e + '</strong>' : '');
-    var l2 = mk('div'); l2.style.cssText = 'font-size:9px;color:var(--text3);margin-top:2px;';
-    l2.textContent = 'Jun ' + (25 + s) + (e !== s ? ' - Jun ' + (25 + e) : '') + ' 2026';
-    ap(rangeDisp, l1, l2);
+    var l1 = mk('div');
+    if (s && e) l1.innerHTML = formatDateShort(s) + ' <strong>\u2192</strong> ' + formatDateShort(e);
+    else if (s) l1.textContent = formatDateShort(s);
+    else l1.textContent = 'Pick a start date';
+    ap(rangeDisp, l1);
   }
-  updateRangeDisp(startDay, endDay);
+  updateRangeDisp(startVal, endVal);
 
   var startRow = mk('div', 'dayslider-row');
-  var startLbl = mk('div');
-  var startLblTxt = mk('div', 'dayslider-lbl', 'Start Day');
-  var startVal = mk('div', 'dayslider-val', 'Day ' + startDay);
-  var startSlider = document.createElement('input');
-  startSlider.type = 'range'; startSlider.className = 'dayslider';
-  startSlider.min = 1; startSlider.max = 12; startSlider.value = startDay;
+  var startLblTxt = mk('div', 'dayslider-lbl', 'Start Date');
+  var startInput = document.createElement('input');
+  startInput.type = 'date'; startInput.className = 'dateinput'; startInput.value = startVal;
 
   var endRow = mk('div', 'dayslider-row');
-  var endLbl = mk('div');
-  var endLblTxt = mk('div', 'dayslider-lbl', 'End Day');
-  var endVal = mk('div', 'dayslider-val', 'Day ' + endDay);
-  var endSlider = document.createElement('input');
-  endSlider.type = 'range'; endSlider.className = 'dayslider';
-  endSlider.min = 1; endSlider.max = 12; endSlider.value = endDay;
+  var endLblTxt = mk('div', 'dayslider-lbl', 'End Date');
+  var endInput = document.createElement('input');
+  endInput.type = 'date'; endInput.className = 'dateinput'; endInput.value = endVal;
 
-  startSlider.addEventListener('input', function() {
-    var sv = parseInt(startSlider.value);
-    var ev = parseInt(endSlider.value);
-    if (sv > ev) { endSlider.value = sv; endVal.textContent = 'Day ' + sv; ev = sv; }
-    startVal.textContent = 'Day ' + sv;
-    updateRangeDisp(sv, Math.max(sv, ev));
+  startInput.addEventListener('change', function() {
+    if (endInput.value && endInput.value < startInput.value) endInput.value = startInput.value;
+    updateRangeDisp(startInput.value, endInput.value);
   });
-  endSlider.addEventListener('input', function() {
-    var sv = parseInt(startSlider.value);
-    var ev = parseInt(endSlider.value);
-    if (ev < sv) { startSlider.value = ev; startVal.textContent = 'Day ' + ev; sv = ev; }
-    endVal.textContent = 'Day ' + ev;
-    updateRangeDisp(Math.min(sv, ev), ev);
+  endInput.addEventListener('change', function() {
+    if (startInput.value && startInput.value > endInput.value) startInput.value = endInput.value;
+    updateRangeDisp(startInput.value, endInput.value);
   });
 
-  ap(startLbl, startLblTxt, startVal);
-  ap(startRow, startLbl, startSlider);
-  ap(endLbl, endLblTxt, endVal);
-  ap(endRow, endLbl, endSlider);
+  ap(startRow, startLblTxt, startInput);
+  ap(endRow, endLblTxt, endInput);
+
+  var quickRow = mk('div'); quickRow.style.cssText = 'display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;';
+  [1,2,3,5,7].forEach(function(n) {
+    var qb = mk('button', 'gbtn', n + ' day' + (n > 1 ? 's' : ''));
+    qb.style.fontSize = '9px';
+    qb.addEventListener('click', function() {
+      if (!startInput.value) { var t0 = new Date(); startInput.value = dateToIso(t0); }
+      endInput.value = addDays(startInput.value, n - 1);
+      updateRangeDisp(startInput.value, endInput.value);
+    });
+    quickRow.appendChild(qb);
+  });
 
   var btnRow = mk('div'); btnRow.style.cssText = 'display:flex;gap:8px;';
   var saveBtn = mk('button', 'btn', 'Save');
   saveBtn.addEventListener('click', function() {
-    var sv = parseInt(startSlider.value);
-    var ev = parseInt(endSlider.value);
-    var dayStr = sv === ev ? 'Day ' + sv : 'Days ' + sv + '-' + ev;
+    if (!startInput.value) { alert('Please pick a start date'); return; }
     var task = allTasks().find(function(x) { return x.id === _dayPickerTid; });
-    if (task) { task.day = dayStr; save(); }
-    if (span) span.innerHTML = formatDayLabel(sv, ev);
+    if (task) {
+      task.start = startInput.value;
+      task.end = endInput.value || startInput.value;
+      delete task.day; // clean up legacy field once migrated
+      save();
+    }
+    if (span) span.textContent = formatDateRangeLabel(startInput.value, endInput.value || startInput.value);
     patchDateLabels();
     renderGantt();
     closeDayPicker();
@@ -1058,7 +1154,7 @@ function openDayPicker(tid, el, span) {
   var cancelBtn = mk('button', 'gbtn', 'Cancel');
   cancelBtn.addEventListener('click', function() { closeDayPicker(); });
   ap(btnRow, saveBtn, cancelBtn);
-  ap(box, title, rangeDisp, startRow, endRow, btnRow);
+  ap(box, title, rangeDisp, startRow, endRow, quickRow, btnRow);
   ap(modal, bg, box);
   document.body.appendChild(modal);
 }
@@ -1085,7 +1181,7 @@ function renderProjectCard(p, container) {
   var subspan = makeEditable(mk('span', '', p.sub), function() { return p.sub; }, function(v) { p.sub = v; });
   var dot = mk('span', '', ' ');
   var secD = getSecDates(p);
-  var secdlbl = mk('span', 'secdates', secD ? 'Day ' + secD.s + (secD.e !== secD.s ? ' - ' + secD.e : '') : p.days);
+  var secdlbl = mk('span', 'secdates', secD ? formatDateRangeLabel(secD.start, secD.end) : p.days);
   secdlbl.dataset.secdates = p.id;
   ap(subrow, subspan, dot, secdlbl);
   ap(info, nrow, subrow);
@@ -1127,7 +1223,7 @@ function renderPhaseEl(pid, ph) {
   var car = mk('div', 'caret', '\u25bc'); car.style.marginLeft = '5px';
   if (open) car.style.transform = 'rotate(180deg)';
   var phd = getPhDates(ph);
-  var phdlbl = mk('span', 'phdates', phd ? 'D' + phd.s + (phd.e !== phd.s ? '-' + phd.e : '') : '');
+  var phdlbl = mk('span', 'phdates', phd ? formatDateRangeLabel(phd.start, phd.end) : '');
   ap(head, lbl); if (note) head.appendChild(note); ap(head, phdlbl, cnt, abtn, dbtn, car);
   head.addEventListener('click', function() { toggleEl('phase', ph.id, head); });
   var tasks = mk('div', 'phtasks');
@@ -1163,8 +1259,8 @@ function renderTaskEl(pid, phid, t) {
   spill.addEventListener('click', function(e) { e.stopPropagation(); cycleStatus(t.id, spill); });
   var dlbl = mk('div', 'daypicker');
   dlbl.dataset.tid = t.id;
-  var dlblDays = parseDays(t.day);
-  var dlblSpan = mk('span'); dlblSpan.innerHTML = formatDayLabel(dlblDays.s, dlblDays.e);
+  var dlblDates = getTaskDates(t);
+  var dlblSpan = mk('span', '', dlblDates ? formatDateRangeLabel(dlblDates.start, dlblDates.end) : 'Set dates');
   dlbl.appendChild(dlblSpan);
   dlbl.addEventListener('click', function(ev) { ev.stopPropagation(); openDayPicker(t.id, dlbl, dlblSpan); });
   var apct = mk('div', '', pct + '%'); apct.style.cssText = 'font-size:8px;color:var(--text3)'; apct.dataset.ap = t.id;
@@ -1339,13 +1435,17 @@ function fetchWeather() {
 
 function renderWeatherRow(daily) {
   if (!daily || !daily.time) return;
-  for (var i = 0; i < 12; i++) {
+  var win = getProjectWindow();
+  var totalDays = daysBetween(win.start, win.end) + 1;
+  for (var i = 0; i < totalDays; i++) {
     var cell = document.querySelector('[data-wx-day="' + i + '"]');
     if (!cell) continue;
-    if (i >= daily.time.length) { cell.innerHTML = ''; continue; }
-    var code = daily.weathercode[i];
-    var hi = Math.round(daily.temperature_2m_max[i]);
-    var rain = daily.precipitation_probability_max ? daily.precipitation_probability_max[i] : null;
+    var iso = addDays(win.start, i);
+    var apiIdx = daily.time.indexOf(iso);
+    if (apiIdx === -1) { cell.innerHTML = ''; continue; }
+    var code = daily.weathercode[apiIdx];
+    var hi = Math.round(daily.temperature_2m_max[apiIdx]);
+    var rain = daily.precipitation_probability_max ? daily.precipitation_probability_max[apiIdx] : null;
     var w = wxIcon(code);
     var html = '<div class="gwx-icon">' + w.icon + '</div><div class="gwx-temp">' + hi + '\u00b0</div>';
     if (rain !== null && rain >= 30) html += '<div class="gwx-rain">' + rain + '%</div>';
@@ -1354,12 +1454,53 @@ function renderWeatherRow(daily) {
   }
 }
 
+function renderGanttHeader() {
+  var win = getProjectWindow();
+  var totalDays = daysBetween(win.start, win.end) + 1;
+  totalDays = Math.max(totalDays, 1);
+  var headRow = document.getElementById('gantt-head-row');
+  if (!headRow) return totalDays;
+  headRow.innerHTML = '<th class="lth">TASK</th>';
+  for (var i = 0; i < totalDays; i++) {
+    var iso = addDays(win.start, i);
+    var d = isoToDate(iso);
+    var dayNames = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+    var isWe = d.getDay() === 0 || d.getDay() === 6;
+    var th = document.createElement('th');
+    if (isWe) th.className = 'we';
+    th.innerHTML = '<span class="dn">' + d.getDate() + '</span>' + dayNames[d.getDay()];
+    headRow.appendChild(th);
+  }
+  return totalDays;
+}
+
 function renderGantt() {
   var tb = document.getElementById('gantt-body');
   if (!tb) return;
   tb.innerHTML = '';
-  var WE = [1,2,7,8];
-  var colors = [];
+
+  var win = getProjectWindow();
+  var winLbl = document.getElementById('gantt-window-label');
+  if (winLbl) winLbl.textContent = formatDateRangeLabel(win.start, win.end).toUpperCase();
+  var totalDays = renderGanttHeader();
+  var WE = [];
+  for (var i = 0; i < totalDays; i++) {
+    var d = isoToDate(addDays(win.start, i));
+    if (d.getDay() === 0 || d.getDay() === 6) WE.push(i);
+  }
+
+  // Resize the weather row to match column count
+  var wxRow = document.getElementById('gantt-weather-row');
+  if (wxRow) {
+    var existingCells = wxRow.querySelectorAll('.gwx');
+    existingCells.forEach(function(c) { c.remove(); });
+    for (var wi = 0; wi < totalDays; wi++) {
+      var wtd = document.createElement('td');
+      wtd.className = 'gwx';
+      wtd.dataset.wxDay = wi;
+      wxRow.appendChild(wtd);
+    }
+  }
 
   DB.projects.forEach(function(proj) {
     // Group header row
@@ -1367,12 +1508,11 @@ function renderGantt() {
     gtr.className = 'gr';
     var gtd = document.createElement('td');
     gtd.className = 'ltd';
-    gtd.colSpan = 13;
+    gtd.colSpan = totalDays + 1;
     gtd.style.cssText = 'color:' + proj.color + ';font-family:Bebas Neue,sans-serif;letter-spacing:2px;font-size:11px;';
     gtd.textContent = proj.name;
     gtr.appendChild(gtd);
     tb.appendChild(gtr);
-    colors.push({label: proj.name.split(' - ')[0].trim(), color: proj.color});
 
     // One row per task
     proj.phases.forEach(function(ph) {
@@ -1410,7 +1550,7 @@ function renderGantt() {
         if (s === 'blocked') d1.style.color = 'var(--red)';
         if (s === 'in-progress') d1.style.color = 'var(--blue)';
 
-        for (var i = 0; i < 12; i++) {
+        for (var i = 0; i < totalDays; i++) {
           var td = document.createElement('td');
           td.className = 'gc' + (WE.indexOf(i) > -1 ? ' we' : '');
           td.style.position = 'relative';
@@ -1418,16 +1558,13 @@ function renderGantt() {
         }
         tb.appendChild(tr);
 
-        // Parse day range e.g. "Days 1-2", "Day 3", "Days 4-6"
-        var dm = t.day.match(/Day[s]?\s*(\d+)[\s\-–]+(\d+)?/i);
-        if (!dm) dm = t.day.match(/Day[s]?\s*(\d+)/i);
-        var barStart = null, barSpan = null;
-        if (dm) {
-          var s2 = parseInt(dm[1]) - 1;
-          var e2 = dm[2] ? parseInt(dm[2]) - 1 : s2;
-          if (s2 >= 0 && s2 < 12) {
-            var span = Math.min(e2 - s2 + 1, 12 - s2);
-            barStart = s2; barSpan = span;
+        // Position bar using real date math against the project window
+        var taskDates = getTaskDates(t);
+        if (taskDates) {
+          var s2 = daysBetween(win.start, taskDates.start);
+          var e2 = daysBetween(win.start, taskDates.end);
+          if (s2 >= 0 && s2 < totalDays) {
+            var span = Math.min(e2 - s2 + 1, totalDays - s2);
             var tds = tr.querySelectorAll('td.gc');
             if (tds[s2]) {
               var bar = document.createElement('div');
@@ -1457,7 +1594,7 @@ function renderGantt() {
           subTr.className = 'gaction-subrow';
           subTr.style.display = 'none';
           var subTd = document.createElement('td');
-          subTd.colSpan = 13;
+          subTd.colSpan = totalDays + 1;
           subTd.style.cssText = 'padding:0;background:var(--s2);';
           var subWrap = document.createElement('div');
           subWrap.style.cssText = 'padding:8px 10px 8px 24px;';
