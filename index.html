@@ -740,7 +740,7 @@ var PROCUREMENT = [
 
 // ── STATE ──────────────────────────────────────────
 var DB = {};
-var APP_VER = 'v27';
+var APP_VER = 'v28';
 
 function uid() { return Math.random().toString(36).slice(2, 8); }
 function save() { Store.save(DB); }
@@ -1312,15 +1312,32 @@ function renderGantt() {
     // One row per task
     proj.phases.forEach(function(ph) {
       ph.tasks.forEach(function(t) {
+        var tot = t.actions.length;
+        var doneCount = 0;
+        t.actions.forEach(function(a, i) { if (ad(t.id + '-' + i)) doneCount++; });
+        var actPct = tot === 0 ? 0 : Math.round((doneCount / tot) * 100);
+
         var tr = document.createElement('tr');
+        tr.className = 'gtask-row';
+        tr.style.cursor = tot > 0 ? 'pointer' : 'default';
         var ltd = document.createElement('td');
         ltd.className = 'ltd';
-        var d1 = document.createElement('div');
+        var d1row = document.createElement('div');
+        d1row.style.cssText = 'display:flex;align-items:center;gap:4px;';
+        var d1 = document.createElement('span');
         d1.textContent = t.name;
+        d1row.appendChild(d1);
+        if (tot > 0) {
+          var car = document.createElement('span');
+          car.className = 'gcaret';
+          car.innerHTML = '&#9656;';
+          car.style.cssText = 'font-size:8px;color:var(--text3);transition:transform .2s;flex-shrink:0;';
+          d1row.appendChild(car);
+        }
         var d2 = document.createElement('div');
         d2.className = 'gs';
-        d2.textContent = ph.label;
-        ltd.appendChild(d1); ltd.appendChild(d2); tr.appendChild(ltd);
+        d2.textContent = ph.label + (tot > 0 ? ' \u00b7 ' + doneCount + '/' + tot + ' actions' : '');
+        ltd.appendChild(d1row); ltd.appendChild(d2); tr.appendChild(ltd);
 
         // Status indicator on label
         var s = ts(t.id);
@@ -1339,21 +1356,69 @@ function renderGantt() {
         // Parse day range e.g. "Days 1-2", "Day 3", "Days 4-6"
         var dm = t.day.match(/Day[s]?\s*(\d+)[\s\-–]+(\d+)?/i);
         if (!dm) dm = t.day.match(/Day[s]?\s*(\d+)/i);
+        var barStart = null, barSpan = null;
         if (dm) {
           var s2 = parseInt(dm[1]) - 1;
           var e2 = dm[2] ? parseInt(dm[2]) - 1 : s2;
           if (s2 >= 0 && s2 < 12) {
             var span = Math.min(e2 - s2 + 1, 12 - s2);
+            barStart = s2; barSpan = span;
             var tds = tr.querySelectorAll('td.gc');
             if (tds[s2]) {
               var bar = document.createElement('div');
               bar.className = 'gbar';
               var col = s === 'done' ? '#aaa' : (s === 'blocked' ? 'var(--red)' : proj.color);
               bar.style.cssText = 'background:' + col + ';color:#fff;left:2px;width:calc(' + span + ' * 100% - 4px);';
-              bar.textContent = t.name.length > 14 ? t.name.substring(0, 13) + '...' : t.name;
+              var barLabel = document.createElement('span');
+              barLabel.style.cssText = 'position:relative;z-index:2;';
+              barLabel.textContent = t.name.length > 14 ? t.name.substring(0, 13) + '...' : t.name;
+              bar.appendChild(barLabel);
+              if (tot > 0) {
+                var fillTrack = document.createElement('div');
+                fillTrack.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(0,0,0,.2);border-radius:0 0 3px 3px;overflow:hidden;';
+                var fill = document.createElement('div');
+                fill.style.cssText = 'height:100%;width:' + actPct + '%;background:rgba(255,255,255,.85);';
+                fillTrack.appendChild(fill);
+                bar.appendChild(fillTrack);
+              }
               tds[s2].appendChild(bar);
             }
           }
+        }
+
+        // Expandable action sub-rows
+        if (tot > 0) {
+          var subTr = document.createElement('tr');
+          subTr.className = 'gaction-subrow';
+          subTr.style.display = 'none';
+          var subTd = document.createElement('td');
+          subTd.colSpan = 13;
+          subTd.style.cssText = 'padding:0;background:var(--s2);';
+          var subWrap = document.createElement('div');
+          subWrap.style.cssText = 'padding:8px 10px 8px 24px;';
+          t.actions.forEach(function(a, i) {
+            var k = t.id + '-' + i;
+            var done = ad(k);
+            var aRow = document.createElement('div');
+            aRow.style.cssText = 'display:flex;align-items:center;gap:6px;padding:3px 0;font-size:10px;color:' + (done ? 'var(--text3)' : 'var(--text2)') + (done ? ';text-decoration:line-through;' : ';');
+            var aIcon = document.createElement('span');
+            aIcon.textContent = done ? '\u2713' : '\u25cb';
+            aIcon.style.cssText = 'color:' + (done ? 'var(--green)' : 'var(--text3)') + ';flex-shrink:0;width:12px;';
+            var aTxt = document.createElement('span');
+            aTxt.textContent = a.t;
+            aRow.appendChild(aIcon); aRow.appendChild(aTxt);
+            subWrap.appendChild(aRow);
+          });
+          subTd.appendChild(subWrap);
+          subTr.appendChild(subTd);
+          tb.appendChild(subTr);
+
+          tr.addEventListener('click', function() {
+            var isOpen = subTr.style.display !== 'none';
+            subTr.style.display = isOpen ? 'none' : 'table-row';
+            var caretEl = tr.querySelector('.gcaret');
+            if (caretEl) caretEl.style.transform = isOpen ? '' : 'rotate(90deg)';
+          });
         }
       });
     });
