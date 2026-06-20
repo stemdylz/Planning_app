@@ -209,9 +209,11 @@ body{padding-top:14px;}
 .gtbl tr.gr td.ltd{font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:2px;background:var(--s3);}
 .gbar{position:absolute;top:50%;transform:translateY(-50%);height:14px;border-radius:3px;display:flex;align-items:center;padding:0 4px;font-family:'JetBrains Mono',monospace;font-size:7px;white-space:nowrap;overflow:hidden;z-index:2;}
 .gweather-row{background:linear-gradient(135deg,rgba(40,104,176,.05),rgba(181,101,10,.04));}
-.gweather-placeholder{padding:0 !important;}
-.gweather-soon{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);padding:8px 10px;letter-spacing:.2px;line-height:1.5;}
-.gweather-soon span{font-size:13px;flex-shrink:0;}
+.gwx{text-align:center;padding:5px 2px;vertical-align:middle;}
+.gwx-icon{font-size:15px;line-height:1;}
+.gwx-temp{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text2);font-weight:600;margin-top:1px;}
+.gwx-rain{font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--blue);margin-top:1px;}
+.gwx-empty{font-size:9px;color:var(--text3);}
 /* PROCUREMENT */
 .ptbl{width:100%;border-collapse:collapse;font-size:11px;}
 .ptbl th{text-align:left;font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--text3);padding:6px 9px;border-bottom:1px solid var(--border2);background:var(--s2);text-transform:uppercase;}
@@ -386,15 +388,15 @@ body{padding-top:14px;}
         <td class="ltd" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);">
           &#9925; WEATHER<br><span style="font-size:8px;opacity:.7;">Parow, Cape Town</span>
         </td>
-        <td colspan="12" class="gweather-placeholder">
-          <div class="gweather-soon">
-            <span>&#127783;&#65039;</span> Weather forecast coming soon — daily high temp + conditions (sunny / cloudy / rainy / hot) for Parow, Cape Town will appear here to help plan outdoor work
-          </div>
-        </td>
+        <td class="gwx" data-wx-day="0"></td><td class="gwx" data-wx-day="1"></td><td class="gwx" data-wx-day="2"></td>
+        <td class="gwx" data-wx-day="3"></td><td class="gwx" data-wx-day="4"></td><td class="gwx" data-wx-day="5"></td>
+        <td class="gwx" data-wx-day="6"></td><td class="gwx" data-wx-day="7"></td><td class="gwx" data-wx-day="8"></td>
+        <td class="gwx" data-wx-day="9"></td><td class="gwx" data-wx-day="10"></td><td class="gwx" data-wx-day="11"></td>
       </tr>
     </tbody>
     <tbody id="gantt-body"></tbody>
   </table></div>
+  <div id="gwx-status" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);margin-top:6px;"></div>
 </div>
 
 <!-- STORAGE -->
@@ -743,7 +745,7 @@ var PROCUREMENT = [
 
 // ── STATE ──────────────────────────────────────────
 var DB = {};
-var APP_VER = 'v31';
+var APP_VER = 'v32';
 
 function uid() { return Math.random().toString(36).slice(2, 8); }
 function save() { Store.save(DB); }
@@ -1284,6 +1286,73 @@ function addProject() {
 }
 
 // ── GANTT (fully dynamic from DB.projects) ───────────
+// ── WEATHER (Open-Meteo, Parow Cape Town) ────────────
+var WX_LAT = -33.9105;
+var WX_LON = 18.5973;
+var WX_CACHE_KEY = 'reno-wx-cache';
+var WX_CACHE_TTL = 1000 * 60 * 60 * 3; // 3 hours
+
+// WMO weather code -> icon + label
+function wxIcon(code) {
+  if (code === 0) return {icon: '\u2600\ufe0f', label: 'Sunny'};
+  if (code === 1 || code === 2) return {icon: '\ud83c\udf24\ufe0f', label: 'Mostly sunny'};
+  if (code === 3) return {icon: '\u2601\ufe0f', label: 'Cloudy'};
+  if (code === 45 || code === 48) return {icon: '\ud83c\udf2b\ufe0f', label: 'Fog'};
+  if (code >= 51 && code <= 57) return {icon: '\ud83c\udf26\ufe0f', label: 'Drizzle'};
+  if (code >= 61 && code <= 67) return {icon: '\ud83c\udf27\ufe0f', label: 'Rain'};
+  if (code >= 71 && code <= 77) return {icon: '\ud83c\udf28\ufe0f', label: 'Snow'};
+  if (code >= 80 && code <= 82) return {icon: '\ud83c\udf26\ufe0f', label: 'Showers'};
+  if (code >= 95) return {icon: '\u26c8\ufe0f', label: 'Storm'};
+  return {icon: '\u2601\ufe0f', label: 'Cloudy'};
+}
+
+function fetchWeather() {
+  var statusEl = document.getElementById('gwx-status');
+  // Try cache first
+  try {
+    var cached = JSON.parse(localStorage.getItem(WX_CACHE_KEY) || 'null');
+    if (cached && (Date.now() - cached.fetchedAt) < WX_CACHE_TTL) {
+      renderWeatherRow(cached.data);
+      if (statusEl) statusEl.textContent = 'Weather cached \u00b7 updated ' + new Date(cached.fetchedAt).toLocaleTimeString();
+      return;
+    }
+  } catch(e) {}
+
+  if (statusEl) statusEl.textContent = 'Loading weather...';
+
+  var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + WX_LAT + '&longitude=' + WX_LON +
+    '&daily=weathercode,temperature_2m_max,precipitation_probability_max&forecast_days=12&timezone=Africa%2FJohannesburg';
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data || !data.daily) throw new Error('No daily data');
+      try { localStorage.setItem(WX_CACHE_KEY, JSON.stringify({data: data.daily, fetchedAt: Date.now()})); } catch(e) {}
+      renderWeatherRow(data.daily);
+      if (statusEl) statusEl.textContent = 'Weather updated just now \u00b7 Open-Meteo';
+    })
+    .catch(function(err) {
+      if (statusEl) statusEl.textContent = 'Weather unavailable \u2014 check connection';
+    });
+}
+
+function renderWeatherRow(daily) {
+  if (!daily || !daily.time) return;
+  for (var i = 0; i < 12; i++) {
+    var cell = document.querySelector('[data-wx-day="' + i + '"]');
+    if (!cell) continue;
+    if (i >= daily.time.length) { cell.innerHTML = ''; continue; }
+    var code = daily.weathercode[i];
+    var hi = Math.round(daily.temperature_2m_max[i]);
+    var rain = daily.precipitation_probability_max ? daily.precipitation_probability_max[i] : null;
+    var w = wxIcon(code);
+    var html = '<div class="gwx-icon">' + w.icon + '</div><div class="gwx-temp">' + hi + '\u00b0</div>';
+    if (rain !== null && rain >= 30) html += '<div class="gwx-rain">' + rain + '%</div>';
+    cell.innerHTML = html;
+    cell.title = w.label + ', high ' + hi + '\u00b0C';
+  }
+}
+
 function renderGantt() {
   var tb = document.getElementById('gantt-body');
   if (!tb) return;
@@ -2251,6 +2320,7 @@ function showTab(name) {
   var panel = document.getElementById('tab-' + name); if (panel) panel.classList.add('on');
   document.querySelectorAll('.ntab').forEach(function(t) { if (t.textContent.toLowerCase().trim() === name.toLowerCase()) t.classList.add('on'); });
   if (name === 'sitemap') { SM.resize(); SM.draw(); }
+  if (name === 'gantt') { fetchWeather(); }
   closeNav();
   window.scrollTo({top: 0, behavior: 'smooth'});
 }
@@ -2278,6 +2348,7 @@ function renderAll() {
 init();
 SM.init();
 initNavDot();
+fetchWeather();
 </script>
 </body>
 </html>
